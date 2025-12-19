@@ -1,0 +1,7 @@
+@"
+node_modules
+dist
+.vite
+.env
+.env.*
+"@ | Out-File .gitignore -Encoding utf8
