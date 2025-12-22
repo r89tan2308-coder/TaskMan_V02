@@ -1,7 +1,51 @@
-@"
-node_modules
-dist
-.vite
+# ================================
+# Node / package managers
+# ================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ================================
+# Build outputs
+# ================================
+dist/
+dev-dist/
+.vite/
+
+# ================================
+# Environment variables
+# ================================
 .env
 .env.*
-"@ | Out-File .gitignore -Encoding utf8
+!.env.example
+
+# ================================
+# PWA / Workbox
+# ================================
+sw.js
+workbox-*.js
+workbox-*.js.map
+
+# ================================
+# OS / Editor
+# ================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# ================================
+# Temporary / cache
+# ================================
+.cache/
+.tmp/
+temp/
+
+# ================================
+# Logs
+# ================================
+*.log
