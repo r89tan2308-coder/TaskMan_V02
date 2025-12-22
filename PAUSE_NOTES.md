@@ -39,5 +39,10 @@ Progress 2025-12-18:
 - Services: tasks (create, complete/undo -> ledger events), xp balance, streak.
 - UI: Today page (XP balance, streak current/best, task list with filter daily/one-time, add-task modal with title/rarity/periodicity, complete button).
 
+Progress 2025-12-19:
+- Navigation added in App.tsx (Today/Ledger/Log/Shop/Settings simple buttons).
+- New pages: Ledger (loads ledger events, newest first, shows time/kind/refId/xp with empty state), Shop (loads rewards or mock seed, shows cost, Buy creates reward ledger event with negative XP and disables when insufficient XP), Daily Log/Settings placeholders.
+- Types/utility: added vite-env reference for PWA virtual module; Dexie transaction call fixed to array form.
+
 Next steps (agreed to do next):
 - Continue UI/feature work after review: e.g., daily log view, ledger view, rewards shop, export/import UI, .ics export, reminders.

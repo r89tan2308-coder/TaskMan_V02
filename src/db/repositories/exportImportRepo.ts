@@ -41,7 +41,7 @@ export async function readAllForExport(meta: ExportMetadata): Promise<ExportBund
 export async function replaceAllFromImport(
   payload: ImportPayload<Omit<ExportBundle, 'meta'>>
 ): Promise<void> {
-  await db.transaction('rw', db.tasks, db.rewards, db.dailyLogs, db.ledgerEvents, db.appMeta, async () => {
+  await db.transaction('rw', [db.tasks, db.rewards, db.dailyLogs, db.ledgerEvents, db.appMeta], async () => {
     await Promise.all([
       db.tasks.clear(),
       db.rewards.clear(),
