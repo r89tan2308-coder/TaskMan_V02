@@ -8,3 +8,7 @@ export async function addEvent(event: LedgerEvent): Promise<void> {
 export async function listEvents(): Promise<LedgerEvent[]> {
   return db.ledgerEvents.orderBy('createdAt').toArray();
 }
+
+export async function deleteEvent(eventId: string): Promise<void> {
+  await db.ledgerEvents.delete(eventId);
+}

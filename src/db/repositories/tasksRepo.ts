@@ -28,3 +28,7 @@ export async function getTask(id: string): Promise<Task | undefined> {
 export async function listTasks(): Promise<Task[]> {
   return db.tasks.toArray();
 }
+
+export async function deleteTask(id: string): Promise<void> {
+  await db.tasks.delete(id);
+}
