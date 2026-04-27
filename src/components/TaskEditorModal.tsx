@@ -47,9 +47,10 @@ const normalizeProgressValue = (value: number) => {
   return Math.round(clamped / PROGRESS_STEP) * PROGRESS_STEP;
 };
 
-const getHandwrittenThemeClassName = () => {
+const getPortalThemeClassName = () => {
   if (typeof document === 'undefined') return '';
   const appRoot = document.querySelector('.tm-app');
+  if (appRoot?.classList.contains('tm-theme-classic')) return 'tm-theme-classic';
   return appRoot?.classList.contains('tm-theme-handwritten') ? 'tm-theme-handwritten' : '';
 };
 
@@ -399,7 +400,7 @@ export function TaskEditorModal({
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const handwrittenThemeClassName = getHandwrittenThemeClassName();
+  const portalThemeClassName = getPortalThemeClassName();
 
   useEffect(() => {
     if (!open) return;
@@ -614,7 +615,7 @@ export function TaskEditorModal({
   return (
     <div className="fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
       <div
-        className={`w-full max-w-md tm-panel tm-task-editor-modal ${handwrittenThemeClassName} p-6 shadow-xl max-h-[85vh] overflow-hidden flex flex-col`}
+        className={`w-full max-w-md tm-panel tm-task-editor-modal ${portalThemeClassName} p-6 shadow-xl max-h-[85vh] overflow-hidden flex flex-col`}
       >
         <div className="space-y-1 mb-4">
           <h2 className="text-xl font-semibold tm-title">{resolvedTitle}</h2>

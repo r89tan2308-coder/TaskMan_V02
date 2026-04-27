@@ -132,9 +132,10 @@ const MAX_TASK_TITLE_LENGTH = 120;
 const PROGRESS_STEP = 5;
 const DEBUG_COUNTS = false;
 
-const getHandwrittenThemeClassName = () => {
+const getPortalThemeClassName = () => {
   if (typeof document === 'undefined') return '';
   const appRoot = document.querySelector('.tm-app');
+  if (appRoot?.classList.contains('tm-theme-classic')) return 'tm-theme-classic';
   return appRoot?.classList.contains('tm-theme-handwritten') ? 'tm-theme-handwritten' : '';
 };
 
@@ -1823,7 +1824,7 @@ function ExecutionTaskCard({
   const moreButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
-  const handwrittenThemeClassName = getHandwrittenThemeClassName();
+  const portalThemeClassName = getPortalThemeClassName();
   const suppressTitleClickRef = useRef(false);
 
   useEffect(() => {
@@ -2041,7 +2042,7 @@ function ExecutionTaskCard({
         ? createPortal(
             <div
               ref={menuRef}
-              className={`tm-task-overflow-menu ${handwrittenThemeClassName}`}
+              className={`tm-task-overflow-menu ${portalThemeClassName}`}
               role="menu"
               aria-label={`Действия для ${task.title}`}
               style={{
