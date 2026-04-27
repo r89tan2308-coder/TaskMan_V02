@@ -1,5 +1,6 @@
 import { db } from '../index';
 import { Task } from '../../entities/task/types';
+import { ensureTaskBucket } from '../../entities/task/buckets';
 
 const generateId = (): string => {
   const uuid = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
@@ -13,20 +14,22 @@ const generateId = (): string => {
 
 export async function createTask(task: Omit<Task, 'id'> & Partial<Pick<Task, 'id'>>): Promise<string> {
   const id = task.id ?? generateId();
-  await db.tasks.add({ ...task, id });
+  await db.tasks.add(ensureTaskBucket({ ...task, id } as Task));
   return id;
 }
 
 export async function updateTask(task: Task): Promise<void> {
-  await db.tasks.put(task);
+  await db.tasks.put(ensureTaskBucket(task));
 }
 
 export async function getTask(id: string): Promise<Task | undefined> {
-  return db.tasks.get(id);
+  const task = await db.tasks.get(id);
+  return task ? ensureTaskBucket(task) : undefined;
 }
 
 export async function listTasks(): Promise<Task[]> {
-  return db.tasks.toArray();
+  const tasks = await db.tasks.toArray();
+  return tasks.map((task) => ensureTaskBucket(task));
 }
 
 export async function deleteTask(id: string): Promise<void> {

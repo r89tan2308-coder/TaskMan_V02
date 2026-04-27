@@ -1,14 +1,21 @@
-import { addEvent } from '../db/repositories/ledgerRepo';
 import {
   createTask as repoCreateTask,
   deleteTask as repoDeleteTask,
-  getTask as repoGetTask,
   listTasks as repoListTasks,
   updateTask as repoUpdateTask
 } from '../db/repositories/tasksRepo';
-import { Task, Rarity, Periodicity, TaskReminder, TaskChecklistItem } from '../entities/task/types';
-import { LedgerEvent } from '../entities/ledger/types';
-import { xpForTask } from '../logic/xp';
+import {
+  Task,
+  Rarity,
+  Periodicity,
+  TaskReminder,
+  TaskChecklistItem,
+  TaskBucket,
+  AllowedWeekday
+} from '../entities/task/types';
+import { suggestTaskBucket } from '../entities/task/buckets';
+import { normalizeAllowedWeekdays } from '../entities/task/weekdays';
+import { LoggedTaskEventResult, logTaskEventByTaskId } from './taskEventService';
 
 const generateId = (): string => {
   const uuid = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
@@ -35,6 +42,9 @@ const normalizeTags = (tags?: string[]) =>
     ? tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean).sort().join('|')
     : '';
 
+const normalizeWeekdays = (weekdays?: readonly AllowedWeekday[]) =>
+  (normalizeAllowedWeekdays(weekdays) ?? []).join('|');
+
 const isDuplicateTask = (task: Task, input: CreateTaskInput, nowMs: number) => {
   const createdAtMs = parseTimestamp(task.createdAt);
   if (Number.isNaN(createdAtMs)) return false;
@@ -43,12 +53,14 @@ const isDuplicateTask = (task: Task, input: CreateTaskInput, nowMs: number) => {
     normalizeText(task.title) === normalizeText(input.title) &&
     task.periodicity === input.periodicity &&
     task.rarity === input.rarity &&
+    (task.projectId ?? null) === (input.projectId ?? null) &&
     (task.xpOverride ?? null) === (input.xpOverride ?? null) &&
     (task.deadline ?? null) === (input.deadline ?? null) &&
     normalizeText(task.comment) === normalizeText(input.comment) &&
     Boolean(task.progressEnabled) === Boolean(input.progressEnabled) &&
     (task.progressValue ?? null) === (input.progressValue ?? null) &&
-    normalizeTags(task.skillTags) === normalizeTags(input.skillTags)
+    normalizeTags(task.skillTags) === normalizeTags(input.skillTags) &&
+    normalizeWeekdays(task.allowedWeekdays) === normalizeWeekdays(input.allowedWeekdays)
   );
 };
 
@@ -56,14 +68,21 @@ export interface CreateTaskInput {
   title: string;
   rarity: Rarity;
   periodicity: Periodicity;
+  quota?: {
+    count: number;
+    per: 'week' | 'month';
+  };
   deadline?: string;
   reminder?: TaskReminder;
   xpOverride?: number;
   comment?: string;
+  projectId?: string | null;
   checklist?: TaskChecklistItem[];
   skillTags?: string[];
   progressEnabled?: boolean;
   progressValue?: number;
+  bucket?: TaskBucket;
+  allowedWeekdays?: AllowedWeekday[];
 }
 
 export async function createTask(input: CreateTaskInput): Promise<string> {
@@ -81,8 +100,19 @@ export async function createTask(input: CreateTaskInput): Promise<string> {
     });
     return duplicate.id;
   }
+  const bucket = suggestTaskBucket({
+    bucket: input.bucket,
+    rarity: input.rarity,
+    periodicity: input.periodicity,
+    deadline: input.deadline,
+    createdAt: now,
+    updatedAt: now
+  });
+
   return repoCreateTask({
     ...input,
+    allowedWeekdays: normalizeAllowedWeekdays(input.allowedWeekdays),
+    bucket,
     archived: false,
     sortOrder,
     createdAt: now,
@@ -106,31 +136,16 @@ export async function deleteTask(taskId: string): Promise<void> {
   await repoDeleteTask(taskId);
 }
 
-export async function completeTask(taskId: string, occurredAt?: string): Promise<void> {
-  const task = await repoGetTask(taskId);
-  if (!task) throw new Error('Task not found');
-  const createdAt = occurredAt ?? new Date().toISOString();
-  const event: LedgerEvent = {
-    id: generateId(),
-    kind: 'task',
-    taskId,
-    deltaXp: xpForTask(task),
-    createdAt
-  };
-  await addEvent(event);
+export async function completeTask(
+  taskId: string,
+  occurredAt?: string
+): Promise<LoggedTaskEventResult> {
+  return logTaskEventByTaskId(taskId, 'TASK_DONE', occurredAt);
 }
 
-export async function undoComplete(taskId: string, occurredAt?: string): Promise<void> {
-  const task = await repoGetTask(taskId);
-  if (!task) throw new Error('Task not found');
-  const createdAt = occurredAt ?? new Date().toISOString();
-  const event: LedgerEvent = {
-    id: generateId(),
-    kind: 'task',
-    taskId,
-    deltaXp: -xpForTask(task),
-    createdAt,
-    note: 'undo'
-  };
-  await addEvent(event);
+export async function undoComplete(
+  taskId: string,
+  occurredAt?: string
+): Promise<LoggedTaskEventResult> {
+  return logTaskEventByTaskId(taskId, 'TASK_UNDO', occurredAt);
 }

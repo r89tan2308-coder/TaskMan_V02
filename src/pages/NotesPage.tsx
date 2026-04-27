@@ -21,10 +21,32 @@ type NoteSort = 'manual' | 'rarity' | 'createdAt';
 
 const NOTES_META_KEY = 'notes';
 const NOTES_SORT_META_KEY = 'notesSortMode';
+const NOTES_BOOTSTRAP_VERSION_META_KEY = 'notesBootstrapVersion';
+const NOTES_BOOTSTRAP_VERSION = 2;
 const NOTE_SORTS: Array<{ value: NoteSort; label: string }> = [
   { value: 'manual', label: 'Ручная' },
   { value: 'rarity', label: 'По редкости' },
   { value: 'createdAt', label: 'По времени создания' }
+];
+
+const LEGACY_NOTES_BOOTSTRAP_SEEDS: Array<Pick<NoteEntry, 'title' | 'summary' | 'body' | 'rarity'>> = [
+  {
+    title: 'Inbox идей по приложению',
+    summary: 'Собрать в одном месте открытые идеи и проблемы по приложению.',
+    body:
+      'Собрать в одном месте открытые идеи и проблемы по приложению.\n\nОдин входящий список без реализации, чтобы потом спокойно разобрать и раскидать по bucket.',
+    rarity: 'rare'
+  }
+];
+
+const NOTES_BOOTSTRAP_SEEDS: Array<Pick<NoteEntry, 'title' | 'summary' | 'body' | 'rarity'>> = [
+  {
+    title: 'Inbox идей по приложению',
+    summary: 'Текущий список продуктовых идей и ближайших улучшений TaskMan.',
+    body:
+      'Что уже имеет смысл держать в фокусе по приложению:\n\n- Inbox идей: один входящий список идей и проблем по приложению, без немедленной реализации, чтобы потом спокойно разбирать и раскладывать по bucket.\n- Today как execution-first экран: Overdue выше Today, очереди Today / Inbox / Next / Backlog внутри одного экрана, компактный Next preview и вторичная contextual pane на широких экранах.\n- Автологика задач: daily и due today автоматически всплывают в Today; recurring weekly / monthly / yearly тоже поднимаются в Today в день текущего дедлайна; bucket остается home queue и не переписывается автоматически.\n- Next layer: позже можно добавить автоподнятие задач с близким дедлайном в Next как временный слой поверх bucket.\n- Карточки задач: сохранять компактные action buttons, не перегружать карточку CTA и продолжать улучшать wide-grid раскладку.\n- История выполнения: держать под рукой блок Сделано ранее и удобную отмену прошлых выполнений без возврата к длинной простыне completed-задач.\n- Streak: ежедневный стрик уже логичен для daily-задач; следующим шагом можно продумать weekly streak и правила его расчета.\n- Theme polish: handwritten theme нужно держать консистентной для popup/menu/modal и не плодить дублирующиеся override в разных CSS-слоях.\n- Notes как product inbox: использовать Notes как место для продуктовых идей, а позже можно подумать о связке заметок с задачами или проектами.',
+    rarity: 'rare'
+  }
 ];
 
 const RARITY_STYLES: Record<Rarity, { border: string; text: string; accent: string }> = {
@@ -85,6 +107,12 @@ const normalizeNotes = (value?: NotesPayload | NoteEntry[]) => {
   });
 };
 
+const noteMatchesSeed = (
+  note: Pick<NoteEntry, 'title' | 'body'>,
+  seed: Pick<NoteEntry, 'title' | 'body'>
+) =>
+  note.title.trim() === seed.title.trim() && note.body.trim() === seed.body.trim();
+
 export function NotesPage() {
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,11 +134,63 @@ export function NotesPage() {
 
   const load = async () => {
     setLoading(true);
-    const [storedNotes, storedSort] = await Promise.all([
+    const [storedNotes, storedSort, storedBootstrapVersion] = await Promise.all([
       getAppMetaValue<NotesPayload | NoteEntry[]>(NOTES_META_KEY),
-      getAppMetaValue<string>(NOTES_SORT_META_KEY)
+      getAppMetaValue<string>(NOTES_SORT_META_KEY),
+      getAppMetaValue<number>(NOTES_BOOTSTRAP_VERSION_META_KEY)
     ]);
-    setNotes(normalizeNotes(storedNotes));
+    let normalizedNotes = normalizeNotes(storedNotes);
+    const bootstrapVersion =
+      typeof storedBootstrapVersion === 'number' && Number.isFinite(storedBootstrapVersion)
+        ? storedBootstrapVersion
+        : 0;
+    if (bootstrapVersion < NOTES_BOOTSTRAP_VERSION) {
+      let changed = false;
+      const baseSortOrder = Date.now();
+      const now = new Date().toISOString();
+      NOTES_BOOTSTRAP_SEEDS.forEach((seed, index) => {
+        if (normalizedNotes.some((note) => noteMatchesSeed(note, seed))) return;
+        const legacySeed = LEGACY_NOTES_BOOTSTRAP_SEEDS[index];
+        const legacyNoteIndex = legacySeed
+          ? normalizedNotes.findIndex((note) => noteMatchesSeed(note, legacySeed))
+          : -1;
+        if (legacyNoteIndex >= 0) {
+          normalizedNotes = normalizedNotes.map((note, noteIndex) =>
+            noteIndex === legacyNoteIndex
+              ? {
+                  ...note,
+                  title: seed.title,
+                  summary: seed.summary,
+                  body: seed.body,
+                  rarity: seed.rarity,
+                  updatedAt: now
+                }
+              : note
+          );
+          changed = true;
+          return;
+        }
+        normalizedNotes = [
+          {
+            id: generateId(),
+            title: seed.title,
+            summary: seed.summary,
+            body: seed.body,
+            rarity: seed.rarity,
+            sortOrder: baseSortOrder + NOTES_BOOTSTRAP_SEEDS.length - index,
+            createdAt: now,
+            updatedAt: now
+          },
+          ...normalizedNotes
+        ];
+        changed = true;
+      });
+      await setAppMetaValue(NOTES_BOOTSTRAP_VERSION_META_KEY, NOTES_BOOTSTRAP_VERSION);
+      if (changed) {
+        await setAppMetaValue(NOTES_META_KEY, { notes: normalizedNotes });
+      }
+    }
+    setNotes(normalizedNotes);
     const normalizedSort = normalizeSortMode(storedSort);
     if (normalizedSort) setSortMode(normalizedSort);
     setLoading(false);

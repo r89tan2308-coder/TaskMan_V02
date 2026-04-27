@@ -1,19 +1,25 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { TodayPage } from './pages/TodayPage';
+import { ProjectsPage } from './pages/ProjectsPage';
+import { ProgressPage, type ProgressTab } from './pages/ProgressPage';
 import { LedgerPage } from './pages/LedgerPage';
-import { AnalyticsPage } from './pages/AnalyticsPage';
 import { DailyLogPage } from './pages/DailyLogPage';
-import { ShopPage } from './pages/ShopPage';
-import { SkillsPage } from './pages/SkillsPage';
 import { NotesPage } from './pages/NotesPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ManualPage } from './pages/ManualPage';
 import { getAppMetaValue, setAppMetaValue } from './db/repositories/appMetaRepo';
+import { FEATURE_FLAGS } from './features/featureFlags';
 
 type InterfaceTheme = 'classic' | 'vault' | 'handwritten';
 
 const INTERFACE_THEME_META_KEY = 'interfaceTheme';
 const HANDWRITTEN_BG_META_KEY = 'handwrittenBackground';
+
+const TetrisPage = lazy(async () => {
+  const module = await import('./features/tetris/TetrisPage');
+  return { default: module.TetrisPage };
+});
 
 const isInterfaceTheme = (value: unknown): value is InterfaceTheme =>
   value === 'classic' || value === 'vault' || value === 'handwritten';
@@ -21,17 +27,22 @@ const isInterfaceTheme = (value: unknown): value is InterfaceTheme =>
 function App() {
   const [route, setRoute] = useState<
     | 'today'
+    | 'projects'
+    | 'progress'
     | 'calendar'
     | 'ledger'
-    | 'analytics'
     | 'log'
-    | 'shop'
-    | 'skills'
     | 'notes'
     | 'settings'
+    | 'manual'
+    | 'tetris'
   >('today');
+  const [progressTab, setProgressTab] = useState<ProgressTab>('shop');
   const [interfaceTheme, setInterfaceTheme] = useState<InterfaceTheme>('classic');
   const [handwrittenBackground, setHandwrittenBackground] = useState<string | null>(null);
+  const navShellRef = useRef<HTMLDivElement | null>(null);
+  const navScrollRef = useRef<HTMLDivElement | null>(null);
+  const isTetrisAccessible = FEATURE_FLAGS.tetris;
 
   useEffect(() => {
     const loadTheme = async () => {
@@ -46,7 +57,7 @@ function App() {
         setHandwrittenBackground(savedBackground);
       }
     };
-    loadTheme();
+    void loadTheme();
   }, []);
 
   useEffect(() => {
@@ -55,6 +66,95 @@ function App() {
       interfaceTheme === 'handwritten'
     );
   }, [interfaceTheme]);
+
+  useEffect(() => {
+    if (route === 'tetris' && !isTetrisAccessible) {
+      setRoute('settings');
+    }
+  }, [isTetrisAccessible, route]);
+
+  useEffect(() => {
+    const navShell = navShellRef.current;
+    const navScroll = navScrollRef.current;
+    if (!navShell || !navScroll) return;
+
+    let frameId = 0;
+    const comfortPadding = 24;
+
+    const updateNavAffordance = () => {
+      const maxScrollLeft = Math.max(0, navScroll.scrollWidth - navScroll.clientWidth);
+      navShell.dataset.scrollLeft = navScroll.scrollLeft > 4 ? 'true' : 'false';
+      navShell.dataset.scrollRight = navScroll.scrollLeft < maxScrollLeft - 4 ? 'true' : 'false';
+    };
+
+    const scrollActiveTabIntoView = (behavior: ScrollBehavior) => {
+      const activeTab = navScroll.querySelector<HTMLButtonElement>('.tm-tab-active');
+      if (!activeTab) {
+        updateNavAffordance();
+        return;
+      }
+
+      const maxScrollLeft = Math.max(0, navScroll.scrollWidth - navScroll.clientWidth);
+      const visibleLeft = navScroll.scrollLeft;
+      const visibleRight = visibleLeft + navScroll.clientWidth;
+      const activeLeft = activeTab.offsetLeft;
+      const activeRight = activeLeft + activeTab.offsetWidth;
+      const safeLeft = activeLeft - comfortPadding;
+      const safeRight = activeRight + comfortPadding;
+
+      if (safeLeft >= visibleLeft && safeRight <= visibleRight) {
+        updateNavAffordance();
+        return;
+      }
+
+      const centeredScrollLeft =
+        activeLeft - (navScroll.clientWidth - activeTab.offsetWidth) / 2;
+      const nextScrollLeft = Math.min(maxScrollLeft, Math.max(0, centeredScrollLeft));
+
+      navScroll.scrollTo({
+        left: nextScrollLeft,
+        behavior
+      });
+      frameId = window.requestAnimationFrame(updateNavAffordance);
+    };
+
+    const requestAffordanceUpdate = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updateNavAffordance);
+    };
+
+    const handleScroll = () => {
+      requestAffordanceUpdate();
+    };
+
+    const handleResize = () => {
+      scrollActiveTabIntoView('auto');
+      requestAffordanceUpdate();
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            handleResize();
+          })
+        : null;
+
+    navScroll.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize);
+    resizeObserver?.observe(navScroll);
+
+    frameId = window.requestAnimationFrame(() => {
+      scrollActiveTabIntoView('auto');
+      updateNavAffordance();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      navScroll.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+      resizeObserver?.disconnect();
+    };
+  }, [route, interfaceTheme]);
 
   const handleInterfaceChange = async (next: InterfaceTheme) => {
     setInterfaceTheme(next);
@@ -68,7 +168,9 @@ function App() {
   };
 
   const themeClassName =
-    interfaceTheme === 'vault'
+    interfaceTheme === 'classic'
+      ? 'tm-theme-classic'
+      : interfaceTheme === 'vault'
       ? 'tm-theme-vault'
       : interfaceTheme === 'handwritten'
       ? 'tm-theme-handwritten'
@@ -87,64 +189,64 @@ function App() {
       className={`tm-app ${route === 'today' ? 'tm-app-today' : ''} ${themeClassName}`}
       style={handwrittenStyle}
     >
-      <nav className="tm-nav">
-        <div className="tm-nav-inner">
-          <button
-            className={`tm-tab ${route === 'today' ? 'tm-tab-active' : ''}`}
-            onClick={() => setRoute('today')}
-          >
-            Today
-          </button>
-          <button
-            className={`tm-tab ${route === 'calendar' ? 'tm-tab-active' : ''}`}
-            onClick={() => setRoute('calendar')}
-          >
-            Calendar
-          </button>
-          <button
-            className={`tm-tab ${route === 'analytics' ? 'tm-tab-active' : ''}`}
-            onClick={() => setRoute('analytics')}
-          >
-            Analytics
-          </button>
-          <button
-            className={`tm-tab ${route === 'shop' ? 'tm-tab-active' : ''}`}
-            onClick={() => setRoute('shop')}
-          >
-            Shop
-          </button>
-          <button
-            className={`tm-tab ${route === 'skills' ? 'tm-tab-active' : ''}`}
-            onClick={() => setRoute('skills')}
-          >
-            Skills
-          </button>
-          <button
-            className={`tm-tab ${route === 'notes' ? 'tm-tab-active' : ''}`}
-            onClick={() => setRoute('notes')}
-          >
-            Notes
-          </button>
-          <button
-            className={`tm-tab ${
-              route === 'settings' || route === 'ledger' || route === 'log'
-                ? 'tm-tab-active'
-                : ''
-            }`}
-            onClick={() => setRoute('settings')}
-          >
-            Settings
-          </button>
+      <nav className="tm-nav tm-nav-compact">
+        <div ref={navShellRef} className="tm-nav-shell" data-scroll-left="false" data-scroll-right="false">
+          <div ref={navScrollRef} className="tm-nav-inner">
+            <button
+              className={`tm-tab ${route === 'today' ? 'tm-tab-active' : ''}`}
+              onClick={() => setRoute('today')}
+            >
+              Today
+            </button>
+            <button
+              className={`tm-tab ${route === 'projects' ? 'tm-tab-active' : ''}`}
+              onClick={() => setRoute('projects')}
+            >
+              Projects
+            </button>
+            <button
+              className={`tm-tab ${route === 'progress' ? 'tm-tab-active' : ''}`}
+              onClick={() => setRoute('progress')}
+            >
+              Progress
+            </button>
+            <button
+              className={`tm-tab ${route === 'calendar' ? 'tm-tab-active' : ''}`}
+              onClick={() => setRoute('calendar')}
+            >
+              Calendar
+            </button>
+            <button
+              className={`tm-tab ${route === 'notes' ? 'tm-tab-active' : ''}`}
+              onClick={() => setRoute('notes')}
+            >
+              Notes
+            </button>
+            <button
+                className={`tm-tab ${
+                route === 'settings' ||
+                route === 'ledger' ||
+                route === 'log' ||
+                route === 'manual' ||
+                route === 'tetris'
+                  ? 'tm-tab-active'
+                  : ''
+              }`}
+              onClick={() => setRoute('settings')}
+            >
+              Settings
+            </button>
+          </div>
         </div>
       </nav>
       {route === 'today' && <TodayPage />}
+      {route === 'projects' && <ProjectsPage />}
+      {route === 'progress' && <ProgressPage tab={progressTab} onTabChange={setProgressTab} />}
       {route === 'calendar' && <CalendarPage />}
       {route === 'ledger' && <LedgerPage />}
-      {route === 'analytics' && <AnalyticsPage />}
       {route === 'log' && <DailyLogPage />}
-      {route === 'shop' && <ShopPage />}
-      {route === 'skills' && <SkillsPage />}
       {route === 'notes' && <NotesPage />}
+      {route === 'manual' && <ManualPage onBack={() => setRoute('settings')} />}
       {route === 'settings' && (
         <SettingsPage
           onNavigate={(target) => setRoute(target)}
@@ -152,8 +254,20 @@ function App() {
           onInterfaceChange={handleInterfaceChange}
           handwrittenBackground={handwrittenBackground}
           onHandwrittenBackgroundChange={handleHandwrittenBackgroundChange}
+          tetrisAvailable={FEATURE_FLAGS.tetris}
         />
       )}
+      {route === 'tetris' && isTetrisAccessible ? (
+        <Suspense
+          fallback={
+            <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
+              <div className="tm-frame p-4 text-sm text-amber-200/70">Загружаем Tetris...</div>
+            </div>
+          }
+        >
+          <TetrisPage onBack={() => setRoute('settings')} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

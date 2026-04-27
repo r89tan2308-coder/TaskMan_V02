@@ -48,6 +48,20 @@ function customKey(date: Date, period: StreakPeriod): { key: string; order: numb
   return { key: `custom-${order}`, order };
 }
 
+function taskEventIsDone(event: LedgerEvent): boolean {
+  if (event.note === 'TASK_DONE' || event.meta?.eventType === 'TASK_DONE') return true;
+  if (
+    event.note === 'TASK_MISSED' ||
+    event.meta?.eventType === 'TASK_MISSED' ||
+    event.note === 'TASK_UNDO' ||
+    event.note === 'undo' ||
+    event.meta?.eventType === 'TASK_UNDO'
+  ) {
+    return false;
+  }
+  return event.deltaXp > 0;
+}
+
 export function computeStreak(
   events: LedgerEvent[],
   period: StreakPeriod,
@@ -129,5 +143,83 @@ export function computeStreak(
     period,
     rule,
     lastEventAt: lastEventAt || undefined
+  };
+}
+
+export function computeTaskDailyStreak(events: LedgerEvent[], taskId: string): StreakState {
+  const period: StreakPeriod = { kind: 'daily' };
+  const rule: StreakRule = { requiredCountPerPeriod: 1 };
+  const taskEvents = events.filter((event) => event.kind === 'task' && event.taskId === taskId);
+
+  if (!taskEvents.length) {
+    return {
+      currentCount: 0,
+      bestCount: 0,
+      period,
+      rule
+    };
+  }
+
+  const latestByDay = new Map<
+    string,
+    { order: number; timestamp: number; completed: boolean; createdAt: string }
+  >();
+  let lastCompletedAt = '';
+
+  for (const event of taskEvents) {
+    const timestamp = new Date(event.createdAt).getTime();
+    if (Number.isNaN(timestamp)) continue;
+    const date = new Date(timestamp);
+    const dayInfo = dailyKey(date);
+    const completed = taskEventIsDone(event);
+    const existing = latestByDay.get(dayInfo.key);
+
+    if (!existing || timestamp > existing.timestamp) {
+      latestByDay.set(dayInfo.key, {
+        order: dayInfo.order,
+        timestamp,
+        completed,
+        createdAt: event.createdAt
+      });
+    }
+
+    if (completed && (!lastCompletedAt || timestamp > new Date(lastCompletedAt).getTime())) {
+      lastCompletedAt = event.createdAt;
+    }
+  }
+
+  const entries = Array.from(latestByDay.values()).sort((left, right) => right.order - left.order);
+  const stepMs = DAY_MS;
+  let currentCount = 0;
+
+  if (entries.length > 0 && entries[0].completed) {
+    let expectedOrder = entries[0].order;
+    for (const entry of entries) {
+      if (entry.order !== expectedOrder || !entry.completed) break;
+      currentCount += 1;
+      expectedOrder -= stepMs;
+    }
+  }
+
+  let bestCount = 0;
+  for (let index = 0; index < entries.length; index += 1) {
+    if (!entries[index].completed) continue;
+    let length = 1;
+    let expectedOrder = entries[index].order - stepMs;
+    for (let innerIndex = index + 1; innerIndex < entries.length; innerIndex += 1) {
+      const entry = entries[innerIndex];
+      if (entry.order !== expectedOrder || !entry.completed) break;
+      length += 1;
+      expectedOrder -= stepMs;
+    }
+    if (length > bestCount) bestCount = length;
+  }
+
+  return {
+    currentCount,
+    bestCount,
+    period,
+    rule,
+    lastEventAt: lastCompletedAt || undefined
   };
 }

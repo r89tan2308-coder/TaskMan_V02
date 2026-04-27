@@ -64,6 +64,10 @@ export function LedgerPage() {
                 const isDeleting = deletingIds.includes(event.id);
                 const taskTitle = event.taskId ? tasksById.get(event.taskId) : undefined;
                 const metaTitle = typeof event.meta?.title === 'string' ? event.meta.title : undefined;
+                const bonusTitle =
+                  event.meta?.eventType === 'PROJECT_COMPLETION_BONUS'
+                    ? `Бонус за завершение проекта: ${xp}`
+                    : null;
                 const deleteTitle =
                   event.note === 'TASK_DELETE'
                     ? metaTitle
@@ -71,7 +75,7 @@ export function LedgerPage() {
                       : 'Удалена задача'
                     : null;
                 const primaryLabel =
-                  deleteTitle ?? (event.kind === 'task' && taskTitle ? taskTitle : event.kind);
+                  bonusTitle ?? deleteTitle ?? (event.kind === 'task' && taskTitle ? taskTitle : event.kind);
                 const showRef = !deleteTitle && (event.kind !== 'task' || !taskTitle);
                 return (
                   <div

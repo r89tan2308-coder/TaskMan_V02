@@ -5,6 +5,7 @@ import type { Task } from '../entities/task/types';
 const baseTask: Task = {
   id: 'task-1',
   title: 'Test',
+  bucket: 'today',
   rarity: 'common',
   periodicity: 'daily',
   createdAt: new Date().toISOString(),

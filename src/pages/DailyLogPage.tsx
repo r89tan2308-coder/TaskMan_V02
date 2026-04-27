@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addEvent, listEvents } from '../db/repositories/ledgerRepo';
+import { listEvents } from '../db/repositories/ledgerRepo';
 import { LedgerEvent } from '../entities/ledger/types';
 import { Task } from '../entities/task/types';
-import { xpForTask } from '../logic/xp';
 import { listTasks } from '../services/tasksService';
+import { logTaskEvent } from '../services/taskEventService';
 
 const PERIODICITY_LABELS: Record<Task['periodicity'], string> = {
   daily: 'Ежедневно',
@@ -11,16 +11,6 @@ const PERIODICITY_LABELS: Record<Task['periodicity'], string> = {
   'one-time': 'Разово',
   monthly: 'Раз в месяц',
   yearly: 'Раз в год'
-};
-
-const generateId = (): string => {
-  const uuid = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : undefined;
-  if (uuid) return uuid;
-  const rand = Math.random().toString(16).slice(2);
-  const time = Date.now().toString(16);
-  return `${time}-${rand}-${Math.random().toString(16).slice(2, 10)}`;
 };
 
 const pad2 = (value: number) => value.toString().padStart(2, '0');
@@ -210,19 +200,12 @@ export function DailyLogPage() {
       return;
     }
     setLoggingTaskId(task.id);
-    const eventType = missed ? 'TASK_MISSED' : 'TASK_DONE';
-    const event: LedgerEvent = {
-      id: generateId(),
-      kind: 'task',
-      taskId: task.id,
-      deltaXp: missed ? -xpForTask(task) : xpForTask(task),
-      createdAt: new Date(occurredAt).toISOString(),
-      note: eventType,
-      meta: { eventType, refId: task.id, occurredAt }
-    };
-    await addEvent(event);
-    await load();
-    setLoggingTaskId(null);
+    try {
+      await logTaskEvent(task, missed ? 'TASK_MISSED' : 'TASK_DONE', occurredAt);
+      await load();
+    } finally {
+      setLoggingTaskId(null);
+    }
   };
 
   return (

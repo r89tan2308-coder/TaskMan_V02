@@ -1,5 +1,5 @@
 html.tm-font-scale-handwritten {
-  font-size: 20px;
+  font-size: 21.6px;
 }
 
 html.tm-font-scale-handwritten,
@@ -264,6 +264,39 @@ html.tm-font-scale-handwritten body {
     rotate(var(--sketch-tilt, 0deg));
 }
 
+.tm-app.tm-theme-handwritten .tm-screen {
+  border-color: rgba(31, 28, 21, 0.26);
+  background:
+    linear-gradient(176deg, rgba(255, 255, 255, 0.9), rgba(246, 237, 220, 0.84)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(73, 54, 28, 0.02),
+      rgba(73, 54, 28, 0.02) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    var(--shadow-soft);
+  color: var(--ink);
+}
+
+.tm-app.tm-theme-handwritten .tm-screen-muted {
+  color: rgba(31, 29, 26, 0.72);
+  opacity: 1;
+}
+
+.tm-app.tm-theme-handwritten .tm-screen .tm-stat-label,
+.tm-app.tm-theme-handwritten .tm-screen .tm-stat-value,
+.tm-app.tm-theme-handwritten .tm-screen .tm-skills-meta-label,
+.tm-app.tm-theme-handwritten .tm-screen .tm-skills-meta-value {
+  color: var(--ink);
+}
+
+.tm-app.tm-theme-handwritten .tm-screen .tm-stat-label-button:hover {
+  color: var(--blue);
+}
+
 .tm-app.tm-theme-handwritten .tm-panel:nth-of-type(2n),
 .tm-app.tm-theme-handwritten .tm-panel-soft:nth-of-type(2n),
 .tm-app.tm-theme-handwritten .tm-history-row:nth-of-type(2n),
@@ -449,7 +482,7 @@ html.tm-font-scale-handwritten body {
 }
 
 .tm-app.tm-theme-handwritten .tm-task-title {
-  font-size: 1.35rem;
+  font-size: calc(1.35rem * var(--tm-handwritten-font-scale, 1));
   letter-spacing: 0.3px;
   text-shadow: none;
   display: inline-block;
@@ -556,6 +589,16 @@ html.tm-font-scale-handwritten body {
   filter: blur(0.15px);
 }
 
+.tm-app.tm-theme-handwritten .tm-nav.tm-nav-compact .tm-tab::before {
+  inset: -1.1px -1.7px;
+  border-width: 0.85px;
+}
+
+.tm-app.tm-theme-handwritten .tm-nav.tm-nav-compact .tm-tab::after {
+  inset: -0.55px -1.1px;
+  border-width: 0.55px;
+}
+
 .tm-app.tm-theme-handwritten .tm-tab:nth-child(2n) {
   --ink-tilt: 0.72deg;
 }
@@ -613,7 +656,7 @@ html.tm-font-scale-handwritten body {
 
 .tm-app.tm-theme-handwritten .tm-button-sm {
   padding: 6px 12px;
-  font-size: 0.92rem;
+  font-size: calc(0.92rem * var(--tm-handwritten-font-scale, 1));
 }
 
 .tm-app.tm-theme-handwritten .tm-card.border-l-4 {
@@ -717,7 +760,7 @@ html.tm-font-scale-handwritten body {
 }
 
 .tm-app.tm-theme-handwritten .tm-progress-value {
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--tm-handwritten-font-scale, 1));
   line-height: 1.1;
   color: rgba(31, 28, 21, 0.85);
 }
@@ -725,8 +768,58 @@ html.tm-font-scale-handwritten body {
 .tm-app.tm-theme-handwritten .tm-stat-note,
 .tm-app.tm-theme-handwritten .tm-note-body-inner {
   color: #3a2d1d;
-  font-size: 1.05rem;
+  font-size: calc(1.05rem * var(--tm-handwritten-font-scale, 1));
   line-height: 1.25;
+}
+
+.tm-app.tm-theme-handwritten .tm-today-day-kicker {
+  border-color: rgba(31, 28, 21, 0.24);
+  background: rgba(255, 255, 255, 0.52);
+  color: rgba(31, 29, 26, 0.72);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-metric {
+  border-color: rgba(31, 28, 21, 0.18);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-label,
+.tm-app.tm-theme-handwritten .tm-today-day-subline,
+.tm-app.tm-theme-handwritten .tm-today-secondary-line,
+.tm-app.tm-theme-handwritten .tm-today-reward-remaining,
+.tm-app.tm-theme-handwritten .tm-today-reward-subline {
+  color: rgba(31, 29, 26, 0.72);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-value,
+.tm-app.tm-theme-handwritten .tm-today-reward-progress-value {
+  color: var(--ink);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-metric-done .tm-today-mini-value {
+  color: var(--green);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-metric-overdue .tm-today-mini-value {
+  color: var(--red);
+}
+
+.tm-app.tm-theme-handwritten .tm-project-chip,
+.tm-app.tm-theme-handwritten .tm-project-status {
+  border-color: rgba(31, 28, 21, 0.24);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--ink);
+}
+
+.tm-app.tm-theme-handwritten .text-emerald-200,
+.tm-app.tm-theme-handwritten .text-emerald-200\/75,
+.tm-app.tm-theme-handwritten .text-emerald-200\/80,
+.tm-app.tm-theme-handwritten .text-emerald-300 {
+  color: #22573b;
+}
+
+.tm-app.tm-theme-handwritten .tm-skills-screen .tm-stat-note {
+  color: rgba(20, 15, 10, 0.96);
 }
 
 .tm-app.tm-theme-handwritten .tm-divider {
@@ -842,15 +935,13 @@ html.tm-font-scale-handwritten body {
 
 .tm-app.tm-theme-handwritten .text-amber-50,
 .tm-app.tm-theme-handwritten .text-amber-100,
+.tm-app.tm-theme-handwritten .text-amber-100\/90,
 .tm-app.tm-theme-handwritten .text-amber-200,
 .tm-app.tm-theme-handwritten .text-amber-200\/60,
 .tm-app.tm-theme-handwritten .text-amber-200\/70,
-.tm-app.tm-theme-handwritten .text-amber-200\/80 {
+.tm-app.tm-theme-handwritten .text-amber-200\/80,
+.tm-app.tm-theme-handwritten .text-amber-200\/90 {
   color: #5a4323;
-}
-
-.tm-app.tm-theme-handwritten .text-emerald-200 {
-  color: var(--green);
 }
 
 .tm-app.tm-theme-handwritten .text-rose-200 {
@@ -876,6 +967,6 @@ html.tm-font-scale-handwritten body {
   }
 
   .tm-app.tm-theme-handwritten .tm-task-title {
-    font-size: 1.22rem;
+    font-size: calc(1.22rem * var(--tm-handwritten-font-scale, 1));
   }
 }

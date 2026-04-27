@@ -1,8 +1,9 @@
 html.tm-font-scale-handwritten {
-  font-size: 25.2px;
+  font-size: 21.6px;
 }
 
 .tm-app.tm-theme-handwritten {
+  --tm-handwritten-font-scale: 1.2;
   color-scheme: light;
   --paper-bg: #f7f1dd;
   --paper-bg-2: #efe2c5;
@@ -35,7 +36,7 @@ html.tm-font-scale-handwritten {
     sans-serif;
   --tm-font-title: var(--tm-font-ui);
   --tm-font-body: var(--tm-font-ui);
-  font-size: 1.12rem;
+  font-size: calc(1.12rem * var(--tm-handwritten-font-scale));
   line-height: 1.25;
   letter-spacing: 0.3px;
   font-family: var(--tm-font-body);
@@ -80,6 +81,7 @@ html.tm-font-scale-handwritten {
 }
 
 .tm-app.tm-theme-handwritten .tm-nav {
+  --tm-nav-fade-color: rgba(247, 241, 221, 0.97);
   background: transparent;
   border-bottom: 2px solid var(--stroke-soft);
   box-shadow: none;
@@ -105,7 +107,7 @@ html.tm-font-scale-handwritten {
 
 .tm-app.tm-theme-handwritten .tm-tab {
   padding: 0.6rem 1.2rem;
-  font-size: 1.05rem;
+  font-size: calc(1.05rem * var(--tm-handwritten-font-scale));
   font-weight: 600;
   --tm-ring-inset: -0.3rem -0.7rem;
   --tm-ring-inset-2: -0.2rem -0.55rem;
@@ -113,7 +115,7 @@ html.tm-font-scale-handwritten {
 
 .tm-app.tm-theme-handwritten .tm-button {
   padding: 0.45rem 0.95rem;
-  font-size: 0.98rem;
+  font-size: calc(0.98rem * var(--tm-handwritten-font-scale));
   font-weight: 600;
   --tm-ring-inset: -0.25rem -0.6rem;
   --tm-ring-inset-2: -0.15rem -0.45rem;
@@ -159,7 +161,7 @@ html.tm-font-scale-handwritten {
 
 .tm-app.tm-theme-handwritten .tm-button-sm {
   padding: 0.3rem 0.65rem;
-  font-size: 0.85rem;
+  font-size: calc(0.85rem * var(--tm-handwritten-font-scale));
 }
 
 .tm-app.tm-theme-handwritten .tm-tab-active {
@@ -205,6 +207,39 @@ html.tm-font-scale-handwritten {
 
 .tm-app.tm-theme-handwritten .tm-panel-soft {
   background: transparent;
+}
+
+.tm-app.tm-theme-handwritten .tm-screen {
+  border-color: rgba(28, 28, 28, 0.26);
+  background:
+    linear-gradient(176deg, rgba(255, 255, 255, 0.9), rgba(246, 237, 220, 0.84)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(73, 54, 28, 0.02),
+      rgba(73, 54, 28, 0.02) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    var(--shadow-soft);
+  color: var(--ink);
+}
+
+.tm-app.tm-theme-handwritten .tm-screen-muted {
+  color: rgba(28, 28, 28, 0.72);
+  opacity: 1;
+}
+
+.tm-app.tm-theme-handwritten .tm-screen .tm-stat-label,
+.tm-app.tm-theme-handwritten .tm-screen .tm-stat-value,
+.tm-app.tm-theme-handwritten .tm-screen .tm-skills-meta-label,
+.tm-app.tm-theme-handwritten .tm-screen .tm-skills-meta-value {
+  color: var(--ink);
+}
+
+.tm-app.tm-theme-handwritten .tm-screen .tm-stat-label-button:hover {
+  color: var(--pen-blue);
 }
 
 .tm-app.tm-theme-handwritten .tm-frame::after,
@@ -289,6 +324,14 @@ html.tm-font-scale-handwritten {
   font-family: var(--tm-font-title);
 }
 
+.tm-app.tm-theme-handwritten .tm-eyebrow {
+  font-size: calc(0.7rem * var(--tm-handwritten-font-scale));
+}
+
+.tm-app.tm-theme-handwritten .tm-label {
+  font-size: calc(0.85rem * var(--tm-handwritten-font-scale));
+}
+
 .tm-app.tm-theme-handwritten .tm-value,
 .tm-app.tm-theme-handwritten .tm-stat-label,
 .tm-app.tm-theme-handwritten .tm-stat-value,
@@ -307,7 +350,12 @@ html.tm-font-scale-handwritten {
 }
 
 .tm-app.tm-theme-handwritten .tm-value {
+  font-size: calc(2rem * var(--tm-handwritten-font-scale));
   font-weight: 700;
+}
+
+.tm-app.tm-theme-handwritten .tm-value-compact {
+  font-size: calc(1.85rem * var(--tm-handwritten-font-scale));
 }
 
 .tm-app.tm-theme-handwritten .tm-task-title,
@@ -405,12 +453,60 @@ html.tm-font-scale-handwritten {
   letter-spacing: 0.2px;
 }
 
+.tm-app.tm-theme-handwritten .tm-today-day-kicker {
+  border-color: var(--stroke-soft);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--ink-soft);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-metric {
+  border-color: var(--stroke-soft);
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-label,
+.tm-app.tm-theme-handwritten .tm-today-day-subline,
+.tm-app.tm-theme-handwritten .tm-today-secondary-line,
+.tm-app.tm-theme-handwritten .tm-today-reward-remaining,
+.tm-app.tm-theme-handwritten .tm-today-reward-subline {
+  color: var(--ink-soft);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-value,
+.tm-app.tm-theme-handwritten .tm-today-reward-progress-value {
+  color: var(--ink);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-metric-done .tm-today-mini-value {
+  color: var(--pen-green);
+}
+
+.tm-app.tm-theme-handwritten .tm-today-mini-metric-overdue .tm-today-mini-value {
+  color: var(--pen-red);
+}
+
+.tm-app.tm-theme-handwritten .tm-project-chip,
+.tm-app.tm-theme-handwritten .tm-project-status {
+  border-color: var(--stroke-soft);
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--ink);
+}
+
+.tm-app.tm-theme-handwritten .text-emerald-200,
+.tm-app.tm-theme-handwritten .text-emerald-200\/75,
+.tm-app.tm-theme-handwritten .text-emerald-200\/80,
+.tm-app.tm-theme-handwritten .text-emerald-300 {
+  color: #22573b;
+}
+
 .tm-app.tm-theme-handwritten .text-amber-50,
 .tm-app.tm-theme-handwritten .text-amber-100,
+.tm-app.tm-theme-handwritten .text-amber-100\/90,
 .tm-app.tm-theme-handwritten .text-amber-200,
 .tm-app.tm-theme-handwritten .text-amber-200\/60,
 .tm-app.tm-theme-handwritten .text-amber-200\/70,
 .tm-app.tm-theme-handwritten .text-amber-200\/80,
+.tm-app.tm-theme-handwritten .text-amber-200\/90,
 .tm-app.tm-theme-handwritten .tm-rarity-text {
   color: #5a4323;
 }
@@ -466,7 +562,23 @@ html.tm-font-scale-handwritten {
   color: var(--ink);
   text-shadow: none;
   font-family: var(--tm-font-title);
-  font-size: 0.72rem;
+  font-size: calc(0.72rem * var(--tm-handwritten-font-scale));
+}
+
+.tm-app.tm-theme-handwritten .text-xs {
+  font-size: calc(0.75rem * var(--tm-handwritten-font-scale));
+}
+
+.tm-app.tm-theme-handwritten .text-sm {
+  font-size: calc(0.875rem * var(--tm-handwritten-font-scale));
+}
+
+.tm-app.tm-theme-handwritten .text-lg {
+  font-size: calc(1.125rem * var(--tm-handwritten-font-scale));
+}
+
+.tm-app.tm-theme-handwritten .text-xl {
+  font-size: calc(1.25rem * var(--tm-handwritten-font-scale));
 }
 
 .tm-app.tm-theme-handwritten .tm-progress-muted {
