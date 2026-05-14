@@ -3,7 +3,7 @@ html.tm-font-scale-handwritten {
 }
 
 .tm-app.tm-theme-handwritten {
-  --tm-handwritten-font-scale: 1.2;
+  --tm-handwritten-font-scale: 1.35;
   color-scheme: light;
   --paper-bg: #f7f1dd;
   --paper-bg-2: #efe2c5;
@@ -514,6 +514,12 @@ html.tm-font-scale-handwritten {
 .tm-app.tm-theme-handwritten .text-amber-50,
 .tm-app.tm-theme-handwritten .tm-rarity-text {
   font-family: var(--tm-font-user);
+}
+
+.tm-app.tm-theme-handwritten .tm-settings-data-note {
+  color: #2b2118;
+  font-family: var(--tm-font-ui);
+  font-weight: 600;
 }
 
 .tm-app.tm-theme-handwritten .tm-card-muted .tm-task-tag {

@@ -7,6 +7,7 @@ import { getProjectCompletionBonusXp } from '../logic/projectBonus';
 import { getProjectTasks, isProjectCompleted } from '../logic/projects';
 import { buildTaskStatusById } from '../logic/taskStatus';
 import { xpForTask } from '../logic/xp';
+import { scheduleAppBadgeRefresh } from './appBadgeService';
 
 export type TaskEventType = 'TASK_DONE' | 'TASK_UNDO' | 'TASK_MISSED';
 
@@ -128,6 +129,7 @@ export async function logTaskEvent(
   const projectBonus =
     eventType === 'TASK_DONE' ? await maybeAwardProjectCompletionBonus(task, createdAt) : null;
 
+  scheduleAppBadgeRefresh();
   return { event, projectBonus };
 }
 

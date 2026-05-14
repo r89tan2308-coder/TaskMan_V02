@@ -411,7 +411,7 @@ export function AnalyticsPage() {
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-reveal space-y-6 p-3 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-3xl font-semibold tm-title">Analytics</h1>
+            <h1 className="sr-only">Analytics</h1>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-amber-200/80">{metricLabel}</p>
               <div className="flex items-center gap-1">

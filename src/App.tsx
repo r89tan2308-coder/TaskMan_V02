@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { AppDialogProvider } from './components/AppDialog';
 import { TodayPage } from './pages/TodayPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProgressPage, type ProgressTab } from './pages/ProgressPage';
@@ -10,11 +11,24 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ManualPage } from './pages/ManualPage';
 import { getAppMetaValue, setAppMetaValue } from './db/repositories/appMetaRepo';
 import { FEATURE_FLAGS } from './features/featureFlags';
+import { AppPet } from './features/pet/AppPet';
+import { emitPetEvent } from './features/pet/petEvents';
+import {
+  getPetEnabled,
+  getPetMotionMode,
+  resetPetPosition,
+  setPetEnabled,
+  setPetMotionMode,
+  type PetMotionMode
+} from './features/pet/petPreferences';
+import { refreshAppBadge, startAppBadgeDayRolloverRefresh } from './services/appBadgeService';
+import { startReminderRuntime } from './services/reminderService';
 
-type InterfaceTheme = 'classic' | 'vault' | 'handwritten';
+type InterfaceTheme = 'classic' | 'vault' | 'handwritten' | 'hud';
 
 const INTERFACE_THEME_META_KEY = 'interfaceTheme';
 const HANDWRITTEN_BG_META_KEY = 'handwrittenBackground';
+const PROGRESS_TAB_META_KEY = 'progressTab';
 
 const TetrisPage = lazy(async () => {
   const module = await import('./features/tetris/TetrisPage');
@@ -22,7 +36,10 @@ const TetrisPage = lazy(async () => {
 });
 
 const isInterfaceTheme = (value: unknown): value is InterfaceTheme =>
-  value === 'classic' || value === 'vault' || value === 'handwritten';
+  value === 'classic' || value === 'vault' || value === 'handwritten' || value === 'hud';
+
+const isProgressTab = (value: unknown): value is ProgressTab =>
+  value === 'skills' || value === 'shop' || value === 'analytics';
 
 function App() {
   const [route, setRoute] = useState<
@@ -37,18 +54,31 @@ function App() {
     | 'manual'
     | 'tetris'
   >('today');
-  const [progressTab, setProgressTab] = useState<ProgressTab>('shop');
+  const [progressTab, setProgressTab] = useState<ProgressTab>('analytics');
   const [interfaceTheme, setInterfaceTheme] = useState<InterfaceTheme>('classic');
   const [handwrittenBackground, setHandwrittenBackground] = useState<string | null>(null);
+  const [petEnabled, setPetEnabledState] = useState(true);
+  const [petMotionMode, setPetMotionModeState] = useState<PetMotionMode>('full');
+  const [petPositionResetKey, setPetPositionResetKey] = useState(0);
   const navShellRef = useRef<HTMLDivElement | null>(null);
   const navScrollRef = useRef<HTMLDivElement | null>(null);
+  const previousRouteRef = useRef<typeof route | null>(null);
   const isTetrisAccessible = FEATURE_FLAGS.tetris;
 
   useEffect(() => {
-    const loadTheme = async () => {
-      const [savedTheme, savedBackground] = await Promise.all([
+    const loadPreferences = async () => {
+      const [
+        savedTheme,
+        savedBackground,
+        savedProgressTab,
+        savedPetEnabled,
+        savedPetMotionMode
+      ] = await Promise.all([
         getAppMetaValue<unknown>(INTERFACE_THEME_META_KEY),
-        getAppMetaValue<unknown>(HANDWRITTEN_BG_META_KEY)
+        getAppMetaValue<unknown>(HANDWRITTEN_BG_META_KEY),
+        getAppMetaValue<unknown>(PROGRESS_TAB_META_KEY),
+        getPetEnabled(),
+        getPetMotionMode()
       ]);
       if (isInterfaceTheme(savedTheme)) {
         setInterfaceTheme(savedTheme);
@@ -56,8 +86,23 @@ function App() {
       if (typeof savedBackground === 'string' && savedBackground.trim().length > 0) {
         setHandwrittenBackground(savedBackground);
       }
+      if (isProgressTab(savedProgressTab)) {
+        setProgressTab(savedProgressTab);
+      }
+      setPetEnabledState(savedPetEnabled);
+      setPetMotionModeState(savedPetMotionMode);
     };
-    void loadTheme();
+    void loadPreferences();
+  }, []);
+
+  useEffect(() => {
+    void refreshAppBadge();
+    const stopBadgeRolloverRefresh = startAppBadgeDayRolloverRefresh();
+    const stopReminderRuntime = startReminderRuntime();
+    return () => {
+      stopBadgeRolloverRefresh();
+      stopReminderRuntime();
+    };
   }, []);
 
   useEffect(() => {
@@ -72,6 +117,14 @@ function App() {
       setRoute('settings');
     }
   }, [isTetrisAccessible, route]);
+
+  useEffect(() => {
+    const previousRoute = previousRouteRef.current;
+    previousRouteRef.current = route;
+    if (!FEATURE_FLAGS.petCompanion || !petEnabled) return;
+    if (previousRoute === null || previousRoute === route) return;
+    emitPetEvent({ type: 'route-changed' });
+  }, [petEnabled, route]);
 
   useEffect(() => {
     const navShell = navShellRef.current;
@@ -167,6 +220,27 @@ function App() {
     await setAppMetaValue(HANDWRITTEN_BG_META_KEY, normalized);
   };
 
+  const handlePetEnabledChange = async (enabled: boolean) => {
+    setPetEnabledState(enabled);
+    await setPetEnabled(enabled);
+  };
+
+  const handlePetMotionModeChange = async (mode: PetMotionMode) => {
+    setPetMotionModeState(mode);
+    await setPetMotionMode(mode);
+  };
+
+  const handlePetPositionReset = async () => {
+    setPetEnabledState(true);
+    await Promise.all([setPetEnabled(true), resetPetPosition()]);
+    setPetPositionResetKey((current) => current + 1);
+  };
+
+  const handleProgressTabChange = async (next: ProgressTab) => {
+    setProgressTab(next);
+    await setAppMetaValue(PROGRESS_TAB_META_KEY, next);
+  };
+
   const themeClassName =
     interfaceTheme === 'classic'
       ? 'tm-theme-classic'
@@ -174,6 +248,8 @@ function App() {
       ? 'tm-theme-vault'
       : interfaceTheme === 'handwritten'
       ? 'tm-theme-handwritten'
+      : interfaceTheme === 'hud'
+      ? 'tm-theme-hud'
       : '';
   const handwrittenStyle =
     interfaceTheme === 'handwritten'
@@ -189,85 +265,100 @@ function App() {
       className={`tm-app ${route === 'today' ? 'tm-app-today' : ''} ${themeClassName}`}
       style={handwrittenStyle}
     >
-      <nav className="tm-nav tm-nav-compact">
-        <div ref={navShellRef} className="tm-nav-shell" data-scroll-left="false" data-scroll-right="false">
-          <div ref={navScrollRef} className="tm-nav-inner">
-            <button
-              className={`tm-tab ${route === 'today' ? 'tm-tab-active' : ''}`}
-              onClick={() => setRoute('today')}
-            >
-              Today
-            </button>
-            <button
-              className={`tm-tab ${route === 'projects' ? 'tm-tab-active' : ''}`}
-              onClick={() => setRoute('projects')}
-            >
-              Projects
-            </button>
-            <button
-              className={`tm-tab ${route === 'progress' ? 'tm-tab-active' : ''}`}
-              onClick={() => setRoute('progress')}
-            >
-              Progress
-            </button>
-            <button
-              className={`tm-tab ${route === 'calendar' ? 'tm-tab-active' : ''}`}
-              onClick={() => setRoute('calendar')}
-            >
-              Calendar
-            </button>
-            <button
-              className={`tm-tab ${route === 'notes' ? 'tm-tab-active' : ''}`}
-              onClick={() => setRoute('notes')}
-            >
-              Notes
-            </button>
-            <button
+      <AppDialogProvider>
+        <nav className="tm-nav tm-nav-compact">
+          <div ref={navShellRef} className="tm-nav-shell" data-scroll-left="false" data-scroll-right="false">
+            <div ref={navScrollRef} className="tm-nav-inner">
+              <button
+                className={`tm-tab ${route === 'today' ? 'tm-tab-active' : ''}`}
+                onClick={() => setRoute('today')}
+              >
+                Today
+              </button>
+              <button
                 className={`tm-tab ${
-                route === 'settings' ||
-                route === 'ledger' ||
-                route === 'log' ||
-                route === 'manual' ||
-                route === 'tetris'
-                  ? 'tm-tab-active'
-                  : ''
-              }`}
-              onClick={() => setRoute('settings')}
-            >
-              Settings
-            </button>
-          </div>
-        </div>
-      </nav>
-      {route === 'today' && <TodayPage />}
-      {route === 'projects' && <ProjectsPage />}
-      {route === 'progress' && <ProgressPage tab={progressTab} onTabChange={setProgressTab} />}
-      {route === 'calendar' && <CalendarPage />}
-      {route === 'ledger' && <LedgerPage />}
-      {route === 'log' && <DailyLogPage />}
-      {route === 'notes' && <NotesPage />}
-      {route === 'manual' && <ManualPage onBack={() => setRoute('settings')} />}
-      {route === 'settings' && (
-        <SettingsPage
-          onNavigate={(target) => setRoute(target)}
-          interfaceTheme={interfaceTheme}
-          onInterfaceChange={handleInterfaceChange}
-          handwrittenBackground={handwrittenBackground}
-          onHandwrittenBackgroundChange={handleHandwrittenBackgroundChange}
-          tetrisAvailable={FEATURE_FLAGS.tetris}
-        />
-      )}
-      {route === 'tetris' && isTetrisAccessible ? (
-        <Suspense
-          fallback={
-            <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
-              <div className="tm-frame p-4 text-sm text-amber-200/70">Загружаем Tetris...</div>
+                  route === 'settings' ||
+                  route === 'ledger' ||
+                  route === 'log' ||
+                  route === 'manual' ||
+                  route === 'tetris'
+                    ? 'tm-tab-active'
+                    : ''
+                }`}
+                onClick={() => setRoute('settings')}
+              >
+                Settings
+              </button>
+              <button
+                className={`tm-tab ${route === 'progress' ? 'tm-tab-active' : ''}`}
+                onClick={() => setRoute('progress')}
+              >
+                Progress
+              </button>
+              <button
+                className={`tm-tab ${route === 'projects' ? 'tm-tab-active' : ''}`}
+                onClick={() => setRoute('projects')}
+              >
+                Projects
+              </button>
+              <button
+                className={`tm-tab ${route === 'calendar' ? 'tm-tab-active' : ''}`}
+                onClick={() => setRoute('calendar')}
+              >
+                Calendar
+              </button>
+              <button
+                className={`tm-tab ${route === 'notes' ? 'tm-tab-active' : ''}`}
+                onClick={() => setRoute('notes')}
+              >
+                Notes
+              </button>
             </div>
-          }
-        >
-          <TetrisPage onBack={() => setRoute('settings')} />
-        </Suspense>
-      ) : null}
+          </div>
+        </nav>
+        {route === 'today' && <TodayPage />}
+        {route === 'projects' && <ProjectsPage />}
+        {route === 'progress' && (
+          <ProgressPage tab={progressTab} onTabChange={handleProgressTabChange} />
+        )}
+        {route === 'calendar' && <CalendarPage />}
+        {route === 'ledger' && <LedgerPage />}
+        {route === 'log' && <DailyLogPage />}
+        {route === 'notes' && <NotesPage />}
+        {route === 'manual' && <ManualPage onBack={() => setRoute('settings')} />}
+        {route === 'settings' && (
+          <SettingsPage
+            onNavigate={(target) => setRoute(target)}
+            interfaceTheme={interfaceTheme}
+            onInterfaceChange={handleInterfaceChange}
+            handwrittenBackground={handwrittenBackground}
+            onHandwrittenBackgroundChange={handleHandwrittenBackgroundChange}
+            petEnabled={petEnabled}
+            petMotionMode={petMotionMode}
+            onPetEnabledChange={handlePetEnabledChange}
+            onPetMotionModeChange={handlePetMotionModeChange}
+            onPetPositionReset={handlePetPositionReset}
+            tetrisAvailable={FEATURE_FLAGS.tetris}
+          />
+        )}
+        {route === 'tetris' && isTetrisAccessible ? (
+          <Suspense
+            fallback={
+              <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
+                <div className="tm-frame p-4 text-sm text-amber-200/70">Загружаем Tetris...</div>
+              </div>
+            }
+          >
+            <TetrisPage onBack={() => setRoute('settings')} />
+          </Suspense>
+        ) : null}
+        <AppPet
+          enabled={FEATURE_FLAGS.petCompanion && petEnabled}
+          motionMode={petMotionMode}
+          positionResetKey={petPositionResetKey}
+          baseState="idle"
+        />
+      </AppDialogProvider>
     </div>
   );
 }

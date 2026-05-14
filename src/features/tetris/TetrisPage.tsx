@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { emitPetEvent } from '../pet/petEvents';
 import './tetris.css';
 import {
   BOARD_HEIGHT,
@@ -162,6 +163,7 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
   const sessionIdRef = useRef(0);
   const sessionStartedAtRef = useRef<number | null>(null);
   const recordedSessionRef = useRef<number | null>(null);
+  const observedLinesRef = useRef(0);
 
   useEffect(() => {
     const loadState = async () => {
@@ -190,6 +192,23 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
       setPhase('game-over');
     }
   }, [game, phase]);
+
+  useEffect(() => {
+    if (!game) {
+      observedLinesRef.current = 0;
+      return;
+    }
+
+    const clearedLines = game.lines - observedLinesRef.current;
+    if (clearedLines >= 4) {
+      emitPetEvent({
+        type: 'task-completed',
+        taskTitle: 'Tetris',
+        xpDelta: 0
+      });
+    }
+    observedLinesRef.current = game.lines;
+  }, [game?.lines]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -263,6 +282,7 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
     sessionIdRef.current += 1;
     sessionStartedAtRef.current = Date.now();
     recordedSessionRef.current = null;
+    observedLinesRef.current = 0;
     setGame(createNewGame());
     setPhase('running');
   };
@@ -292,6 +312,7 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
   const score = game?.score ?? 0;
   const lines = game?.lines ?? 0;
   const level = game?.level ?? 1;
+  const bestScore = Math.max(score, records[0]?.score ?? 0);
   const statusLabel =
     phase === 'idle'
       ? 'Готова к старту'
@@ -366,8 +387,18 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
                 ) : null}
                 {phase === 'game-over' ? (
                   <div className="tm-tetris-overlay">
-                    <div className="tm-tetris-overlay-card">
+                    <div className="tm-tetris-overlay-card tm-tetris-game-over-card">
                       <p className="m-0">Игра окончена</p>
+                      <div className="tm-tetris-game-over-stats">
+                        <div>
+                          <span>Очки</span>
+                          <strong>{score}</strong>
+                        </div>
+                        <div>
+                          <span>Рекорд</span>
+                          <strong>{bestScore}</strong>
+                        </div>
+                      </div>
                       <p className="m-0 text-sm text-amber-200/75">Можно сразу начать заново.</p>
                     </div>
                   </div>

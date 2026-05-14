@@ -3,6 +3,7 @@ import { deleteEvent, listEvents } from '../db/repositories/ledgerRepo';
 import { LedgerEvent } from '../entities/ledger/types';
 import { Task } from '../entities/task/types';
 import { listTasks } from '../services/tasksService';
+import { showAppAlert, showAppConfirm } from '../components/AppDialog';
 
 export function LedgerPage() {
   const [events, setEvents] = useState<LedgerEvent[]>([]);
@@ -28,14 +29,18 @@ export function LedgerPage() {
 
   const handleDelete = async (event: LedgerEvent) => {
     if (event.kind !== 'task' && event.kind !== 'adjustment') return;
-    const confirmed = window.confirm('Delete this event from ledger?');
+    const confirmed = await showAppConfirm({
+      message: 'Delete this event from ledger?',
+      confirmLabel: 'Delete',
+      tone: 'danger'
+    });
     if (!confirmed) return;
     setDeletingIds((prev) => (prev.includes(event.id) ? prev : [...prev, event.id]));
     try {
       await deleteEvent(event.id);
       setEvents((prev) => prev.filter((item) => item.id !== event.id));
     } catch (error) {
-      alert('Failed to delete event.');
+      await showAppAlert('Failed to delete event.');
     } finally {
       setDeletingIds((prev) => prev.filter((id) => id !== event.id));
     }

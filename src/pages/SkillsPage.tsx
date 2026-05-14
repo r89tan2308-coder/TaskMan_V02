@@ -22,10 +22,6 @@ type SkillsStatsState = {
   skills: StatItem[];
 };
 
-type SkillsLayoutState = {
-  showAdvanced: boolean;
-};
-
 type SkillsGoalsState = {
   characteristics: Record<string, number>;
   skills: Record<string, number>;
@@ -50,7 +46,6 @@ type SkillsSnapshotsState = {
 
 const WHEEL_META_KEY = 'balanceWheel';
 const STATS_META_KEY = 'skillsStats';
-const LAYOUT_META_KEY = 'skillsLayout';
 const GOALS_META_KEY = 'skillsGoals';
 const NOTES_META_KEY = 'skillsNotes';
 const HISTORY_META_KEY = 'skillsSnapshots';
@@ -213,6 +208,26 @@ const getLowestSegments = (segments: WheelSegment[], count: number) =>
   [...segments]
     .sort((left, right) => clampScore(left.score) - clampScore(right.score))
     .slice(0, count);
+
+const splitWheelLabel = (value: string) => {
+  const normalized = value.replace(/\s*,\s*/g, ', ').trim();
+  if (normalized.length <= 10) return [normalized];
+
+  const lines: string[] = [];
+  let current = '';
+  for (const word of normalized.split(/\s+/)) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= 11 || !current) {
+      current = next;
+      continue;
+    }
+    lines.push(current);
+    current = word;
+  }
+  if (current) lines.push(current);
+  if (lines.length <= 2) return lines;
+  return [lines[0], lines.slice(1).join(' ')];
+};
 
 const toRadians = (value: number) => (value * Math.PI) / 180;
 
@@ -411,7 +426,6 @@ export function SkillsPage() {
     skills: {}
   });
   const [snapshots, setSnapshots] = useState<SkillsSnapshot[]>([]);
-  const [showAdvanced, setShowAdvanced] = useState(true);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [draftSegments, setDraftSegments] = useState<WheelSegment[]>([]);
@@ -433,14 +447,12 @@ export function SkillsPage() {
       const [
         storedWheel,
         storedStats,
-        storedLayout,
         storedGoals,
         storedNotes,
         storedHistory
       ] = await Promise.all([
         getAppMetaValue<BalanceWheelState>(WHEEL_META_KEY),
         getAppMetaValue<SkillsStatsState>(STATS_META_KEY),
-        getAppMetaValue<SkillsLayoutState>(LAYOUT_META_KEY),
         getAppMetaValue<SkillsGoalsState>(GOALS_META_KEY),
         getAppMetaValue<SkillsNotesState>(NOTES_META_KEY),
         getAppMetaValue<SkillsSnapshotsState>(HISTORY_META_KEY)
@@ -464,7 +476,6 @@ export function SkillsPage() {
       setSegments(nextSegments);
       setCharacteristics(nextCharacteristics);
       setSkills(nextSkills);
-      setShowAdvanced(storedLayout?.showAdvanced ?? true);
       const nextGoals = {
         characteristics: storedGoals?.characteristics ?? {},
         skills: storedGoals?.skills ?? {}
@@ -500,11 +511,12 @@ export function SkillsPage() {
   }, [segments]);
 
   const wheelGeometry = useMemo(() => {
-    const size = 420;
+    const size = 560;
     const center = size / 2;
-    const radius = 140;
-    const labelRadius = 195;
-    return { size, center, radius, labelRadius };
+    const radius = 270;
+    const labelRadius = 168;
+    const valueRadius = 240;
+    return { size, center, radius, labelRadius, valueRadius };
   }, []);
 
   const openEditor = () => {
@@ -530,12 +542,6 @@ export function SkillsPage() {
     setDraftGoalSkills(buildGoalMap(baseItems, goals.skills, MAX_SKILL));
     setDraftNotesSkills(buildNotesMap(baseItems, notes.skills));
     setEditingSkills(true);
-  };
-
-  const toggleAdvanced = async () => {
-    const next = !showAdvanced;
-    setShowAdvanced(next);
-    await setAppMetaValue(LAYOUT_META_KEY, { showAdvanced: next });
   };
 
   const toggleCharacteristicNote = (id: string) => {
@@ -774,8 +780,8 @@ export function SkillsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-8">
-        <div className="tm-frame tm-reveal tm-skills-frame space-y-6 p-3 sm:p-6">
+      <div className="tm-skills-shell">
+        <div className="tm-frame tm-reveal tm-skills-frame space-y-4 p-1 sm:p-2">
           <header className="tm-skills-header">
             <div className="tm-skills-header-title">
               <p className="tm-eyebrow">TaskQuest</p>
@@ -797,24 +803,15 @@ export function SkillsPage() {
                   <span className="tm-skills-meta-value">{snapshotsDisplay}</span>
                 </div>
               </div>
-              <button
-                onClick={toggleAdvanced}
-                className="tm-button tm-button-ghost tm-button-sm"
-              >
-                {showAdvanced ? 'Простой вид' : 'Показать детали'}
-              </button>
             </div>
           </header>
 
           <div className="tm-skills-grid">
-            <div className="tm-panel tm-reveal tm-reveal-delay-1 tm-skills-panel tm-skills-panel-center p-4">
+            <div className="tm-panel tm-reveal tm-reveal-delay-1 tm-skills-panel tm-skills-panel-center p-1 sm:p-2">
               <div className="tm-skills-panel-header">
                 <h2 className="text-lg font-semibold tm-title">Колесо баланса</h2>
               </div>
               <div className="tm-screen tm-wheel-screen">
-                <p className="text-sm tm-screen-muted">
-                  Нажмите на колесо, чтобы отредактировать названия и оценки.
-                </p>
                 <div
                   className="tm-wheel"
                   onClick={openEditor}
@@ -874,14 +871,14 @@ export function SkillsPage() {
                           wheelGeometry.labelRadius,
                           midAngle
                         );
-                        const valueRadius = Math.max(28, wheelGeometry.radius - 14);
                         const valuePos = polarToCartesian(
                           wheelGeometry.center,
                           wheelGeometry.center,
-                          valueRadius,
+                          wheelGeometry.valueRadius,
                           midAngle
                         );
-                        const labelAnchor = Math.cos(toRadians(midAngle)) >= 0 ? 'start' : 'end';
+                        const labelLines = splitWheelLabel(segment.name);
+                        const firstLineOffset = -((labelLines.length - 1) * 10);
                         return (
                           <g key={segment.id}>
                             <path
@@ -928,10 +925,18 @@ export function SkillsPage() {
                               className="tm-wheel-label"
                               x={labelPos.x}
                               y={labelPos.y}
-                              textAnchor={labelAnchor}
+                              textAnchor="middle"
                               dominantBaseline="middle"
                             >
-                              {segment.name}
+                              {labelLines.map((line, lineIndex) => (
+                                <tspan
+                                  key={`${segment.id}-label-${lineIndex}`}
+                                  x={labelPos.x}
+                                  dy={lineIndex === 0 ? firstLineOffset : 22}
+                                >
+                                  {line}
+                                </tspan>
+                              ))}
                             </text>
                           </g>
                         );
@@ -1105,8 +1110,7 @@ export function SkillsPage() {
             </div>
           </div>
           </div>
-          {showAdvanced ? (
-            <div className="tm-skills-secondary">
+          <div className="tm-skills-secondary">
               <div className="tm-panel tm-reveal tm-skills-panel p-4">
                 <div className="tm-skills-panel-header">
                   <h2 className="text-lg font-semibold tm-title">Индекс баланса</h2>
@@ -1184,8 +1188,7 @@ export function SkillsPage() {
                   )}
                 </div>
               </div>
-            </div>
-          ) : null}
+          </div>
         </div>
       </div>
 

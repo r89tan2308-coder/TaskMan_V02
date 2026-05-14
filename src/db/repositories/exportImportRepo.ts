@@ -11,6 +11,7 @@ import type { Reward } from '../../entities/reward/types';
 import type { DailyLogEntry } from '../../entities/dailyLog/types';
 import type { LedgerEvent, LedgerEventKind } from '../../entities/ledger/types';
 import type { ExportMetadata, ImportPayload } from '../../entities/app/types';
+import { scheduleAppBadgeRefresh } from '../../services/appBadgeService';
 
 export interface ExportBundle {
   meta: ExportMetadata;
@@ -430,4 +431,5 @@ export async function replaceAllFromValidatedImport(
 export async function replaceAllFromImport(payload: SupportedImportPayload): Promise<void> {
   const validatedImport = validateBackupImportPayload(payload);
   await replaceAllFromValidatedImport(validatedImport);
+  scheduleAppBadgeRefresh();
 }

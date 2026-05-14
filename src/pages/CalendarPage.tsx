@@ -436,7 +436,7 @@ export function CalendarPage() {
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-reveal space-y-4 p-3 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-3xl font-semibold tm-title">Calendar</h1>
+            <h1 className="sr-only">Calendar</h1>
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={setToday} className="tm-button tm-button-ghost tm-button-sm">
                 Сегодня

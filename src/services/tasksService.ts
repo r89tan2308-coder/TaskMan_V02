@@ -13,8 +13,9 @@ import {
   TaskBucket,
   AllowedWeekday
 } from '../entities/task/types';
-import { suggestTaskBucket } from '../entities/task/buckets';
+import { normalizeTaskSchedule, suggestTaskBucket } from '../entities/task/buckets';
 import { normalizeAllowedWeekdays } from '../entities/task/weekdays';
+import { scheduleAppBadgeRefresh } from './appBadgeService';
 import { LoggedTaskEventResult, logTaskEventByTaskId } from './taskEventService';
 
 const generateId = (): string => {
@@ -89,35 +90,41 @@ export async function createTask(input: CreateTaskInput): Promise<string> {
   const nowMs = Date.now();
   const now = new Date(nowMs).toISOString();
   const sortOrder = nowMs;
+  const schedule = normalizeTaskSchedule(input);
+  const normalizedInput = {
+    ...input,
+    ...schedule
+  };
   const existingTasks = await repoListTasks();
-  const duplicate = existingTasks.find((task) => isDuplicateTask(task, input, nowMs));
+  const duplicate = existingTasks.find((task) => isDuplicateTask(task, normalizedInput, nowMs));
   if (duplicate) {
     console.warn('[tasksService.createTask] Duplicate prevented', {
       existingTaskId: duplicate.id,
-      title: input.title,
-      periodicity: input.periodicity,
-      rarity: input.rarity
+      title: normalizedInput.title,
+      periodicity: normalizedInput.periodicity,
+      rarity: normalizedInput.rarity
     });
     return duplicate.id;
   }
   const bucket = suggestTaskBucket({
-    bucket: input.bucket,
-    rarity: input.rarity,
-    periodicity: input.periodicity,
-    deadline: input.deadline,
+    bucket: normalizedInput.bucket,
+    rarity: normalizedInput.rarity,
+    periodicity: normalizedInput.periodicity,
+    deadline: normalizedInput.deadline,
     createdAt: now,
     updatedAt: now
   });
 
-  return repoCreateTask({
-    ...input,
-    allowedWeekdays: normalizeAllowedWeekdays(input.allowedWeekdays),
+  const taskId = await repoCreateTask({
+    ...normalizedInput,
     bucket,
     archived: false,
     sortOrder,
     createdAt: now,
     updatedAt: now
   });
+  scheduleAppBadgeRefresh();
+  return taskId;
 }
 
 export async function listTasks(): Promise<Task[]> {
@@ -129,11 +136,14 @@ export async function listTasks(): Promise<Task[]> {
 
 export async function updateTask(task: Task): Promise<void> {
   const updatedAt = new Date().toISOString();
-  await repoUpdateTask({ ...task, updatedAt });
+  const schedule = normalizeTaskSchedule(task);
+  await repoUpdateTask({ ...task, ...schedule, updatedAt });
+  scheduleAppBadgeRefresh();
 }
 
 export async function deleteTask(taskId: string): Promise<void> {
   await repoDeleteTask(taskId);
+  scheduleAppBadgeRefresh();
 }
 
 export async function completeTask(

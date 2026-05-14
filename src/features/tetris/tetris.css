@@ -25,11 +25,14 @@
 
 .tm-tetris-board-wrap {
   position: relative;
+  isolation: isolate;
   display: flex;
   justify-content: center;
 }
 
 .tm-tetris-board {
+  position: relative;
+  z-index: 0;
   display: grid;
   grid-template-columns: repeat(var(--tm-tetris-columns), minmax(0, 1fr));
   grid-template-rows: repeat(var(--tm-tetris-rows), minmax(0, 1fr));
@@ -168,6 +171,7 @@
 .tm-tetris-overlay {
   position: absolute;
   inset: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -177,6 +181,8 @@
 }
 
 .tm-tetris-overlay-card {
+  position: relative;
+  z-index: 1;
   max-width: 14rem;
   padding: 0.85rem 1rem;
   border-radius: 0.9rem;
@@ -184,6 +190,41 @@
   background: rgba(18, 15, 13, 0.94);
   box-shadow: 0 12px 20px rgba(0, 0, 0, 0.45);
   text-align: center;
+}
+
+.tm-tetris-game-over-card {
+  max-width: 16rem;
+}
+
+.tm-tetris-game-over-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0.75rem 0;
+}
+
+.tm-tetris-game-over-stats div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(200, 160, 90, 0.28);
+  background: rgba(8, 7, 6, 0.46);
+}
+
+.tm-tetris-game-over-stats span {
+  color: rgba(242, 223, 179, 0.62);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tm-tetris-game-over-stats strong {
+  color: rgb(255, 232, 163);
+  font-size: 1.3rem;
+  line-height: 1;
 }
 
 .tm-tetris-controls {

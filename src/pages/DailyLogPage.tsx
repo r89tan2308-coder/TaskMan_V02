@@ -4,6 +4,7 @@ import { LedgerEvent } from '../entities/ledger/types';
 import { Task } from '../entities/task/types';
 import { listTasks } from '../services/tasksService';
 import { logTaskEvent } from '../services/taskEventService';
+import { showAppAlert } from '../components/AppDialog';
 
 const PERIODICITY_LABELS: Record<Task['periodicity'], string> = {
   daily: 'Ежедневно',
@@ -196,7 +197,7 @@ export function DailyLogPage() {
   const logTask = async (task: Task, missed: boolean) => {
     const occurredAt = resolveLogOccurredAt();
     if (occurredAt === null) {
-      alert('Укажите корректную дату и время события.');
+      await showAppAlert('Укажите корректную дату и время события.');
       return;
     }
     setLoggingTaskId(task.id);

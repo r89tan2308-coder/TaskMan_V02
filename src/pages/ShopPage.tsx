@@ -5,6 +5,7 @@ import { addEvent, listEvents } from '../db/repositories/ledgerRepo';
 import { getAppMetaValue, setAppMetaValue } from '../db/repositories/appMetaRepo';
 import { LedgerEvent } from '../entities/ledger/types';
 import { db } from '../db';
+import { showAppAlert, showAppConfirm } from '../components/AppDialog';
 
 const generateId = (): string => {
   const uuid = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -137,7 +138,7 @@ export function ShopPage() {
     try {
       await updatePinnedRewards([...pinnedRewardIds, rewardId]);
     } catch (error) {
-      alert('Не удалось закрепить награду.');
+      await showAppAlert('Не удалось закрепить награду.');
     }
   };
 
@@ -146,7 +147,7 @@ export function ShopPage() {
     try {
       await updatePinnedRewards(pinnedRewardIds.filter((id) => id !== rewardId));
     } catch (error) {
-      alert('Не удалось убрать награду.');
+      await showAppAlert('Не удалось убрать награду.');
     }
   };
 
@@ -205,7 +206,7 @@ export function ShopPage() {
     const name = editName.trim();
     const cost = parseCost(editCost);
     if (!name || cost === null) {
-      alert('Введите название и цену.');
+      await showAppAlert('Введите название и цену.');
       return;
     }
     const cooldownHours = parseCooldown(editCooldown, editRepeatable);
@@ -227,7 +228,7 @@ export function ShopPage() {
       setEditCooldown('');
       await load();
     } catch (error) {
-      alert('Не удалось сохранить покупку.');
+      await showAppAlert('Не удалось сохранить покупку.');
     } finally {
       setSavingId(null);
     }
@@ -238,7 +239,7 @@ export function ShopPage() {
     const name = newName.trim();
     const cost = parseCost(newCost);
     if (!name || cost === null) {
-      alert('Введите название и цену.');
+      await showAppAlert('Введите название и цену.');
       return;
     }
     setAdding(true);
@@ -260,7 +261,7 @@ export function ShopPage() {
       setNewCooldown('');
       await load();
     } catch (error) {
-      alert('Не удалось добавить покупку.');
+      await showAppAlert('Не удалось добавить покупку.');
     } finally {
       setAdding(false);
     }
@@ -268,7 +269,11 @@ export function ShopPage() {
 
   const deleteReward = async (reward: Reward) => {
     if (deletingId) return;
-    const confirmed = window.confirm(`Удалить покупку "${reward.name}"?`);
+    const confirmed = await showAppConfirm({
+      message: `Удалить покупку "${reward.name}"?`,
+      confirmLabel: 'Удалить',
+      tone: 'danger'
+    });
     if (!confirmed) return;
     setDeletingId(reward.id);
     try {
@@ -281,7 +286,7 @@ export function ShopPage() {
       }
       await load();
     } catch (error) {
-      alert('Не удалось удалить покупку.');
+      await showAppAlert('Не удалось удалить покупку.');
     } finally {
       setDeletingId(null);
     }
@@ -293,7 +298,7 @@ export function ShopPage() {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-reveal space-y-4 p-3 sm:p-6">
-          <h1 className="text-3xl font-semibold tm-title">Shop</h1>
+          <h1 className="sr-only">Shop</h1>
           <p className="tm-label">XP: {xp}</p>
 
           <div className="tm-panel-soft p-3 space-y-2">

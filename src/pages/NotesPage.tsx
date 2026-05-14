@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { showAppAlert, showAppConfirm } from '../components/AppDialog';
 import { getAppMetaValue, setAppMetaValue } from '../db/repositories/appMetaRepo';
 import { Rarity } from '../entities/task/types';
 
@@ -260,19 +261,19 @@ export function NotesPage() {
     setDraftRarity('common');
   };
 
-  const toggleExpanded = (noteId: string) => {
+  const toggleExpanded = async (noteId: string) => {
     if (editingId === noteId) return;
     if (editingId && editingId !== noteId) {
-      const confirmed = window.confirm('Сбросить изменения в текущей заметке?');
+      const confirmed = await showAppConfirm('Сбросить изменения в текущей заметке?');
       if (!confirmed) return;
       resetDraft();
     }
     setExpandedId((prev) => (prev === noteId ? null : noteId));
   };
 
-  const startEdit = (note: NoteEntry) => {
+  const startEdit = async (note: NoteEntry) => {
     if (editingId && editingId !== note.id) {
-      const confirmed = window.confirm('Сбросить изменения в текущей заметке?');
+      const confirmed = await showAppConfirm('Сбросить изменения в текущей заметке?');
       if (!confirmed) return;
     }
     setEditingId(note.id);
@@ -291,7 +292,7 @@ export function NotesPage() {
     if (savingId) return;
     const title = draftTitle.trim();
     if (!title) {
-      alert('Введите название заметки.');
+      await showAppAlert('Введите название заметки.');
       return;
     }
     const summary = draftSummary.trim();
@@ -310,7 +311,7 @@ export function NotesPage() {
       await persistNotes(nextNotes);
       resetDraft();
     } catch (error) {
-      alert('Не удалось сохранить заметку.');
+      await showAppAlert('Не удалось сохранить заметку.');
       await load();
     } finally {
       setSavingId(null);
@@ -334,9 +335,9 @@ export function NotesPage() {
       };
       const nextNotes = [note, ...notes];
       await persistNotes(nextNotes);
-      startEdit(note);
+      await startEdit(note);
     } catch (error) {
-      alert('Не удалось создать заметку.');
+      await showAppAlert('Не удалось создать заметку.');
     } finally {
       setAdding(false);
     }
@@ -345,7 +346,11 @@ export function NotesPage() {
   const deleteNote = async (note: NoteEntry) => {
     if (deletingId) return;
     const noteTitle = note.title.trim() || 'без названия';
-    const confirmed = window.confirm(`Удалить заметку "${noteTitle}"?`);
+    const confirmed = await showAppConfirm({
+      message: `Удалить заметку "${noteTitle}"?`,
+      confirmLabel: 'Удалить',
+      tone: 'danger'
+    });
     if (!confirmed) return;
     setDeletingId(note.id);
     try {
@@ -354,7 +359,7 @@ export function NotesPage() {
       if (expandedId === note.id) setExpandedId(null);
       if (editingId === note.id) resetDraft();
     } catch (error) {
-      alert('Не удалось удалить заметку.');
+      await showAppAlert('Не удалось удалить заметку.');
       await load();
     } finally {
       setDeletingId(null);
@@ -385,7 +390,7 @@ export function NotesPage() {
     try {
       await persistNotes(reorderedWithSort);
     } catch (error) {
-      alert('Не удалось изменить порядок заметок.');
+      await showAppAlert('Не удалось изменить порядок заметок.');
       await load();
     }
   };
@@ -425,7 +430,7 @@ export function NotesPage() {
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-reveal space-y-4 p-3 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-3xl font-semibold tm-title">Notes</h1>
+            <h1 className="sr-only">Notes</h1>
             <div className="flex items-center gap-2">
               <div className="relative" ref={sortMenuRef}>
                 <button

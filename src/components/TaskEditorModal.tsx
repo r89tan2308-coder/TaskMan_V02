@@ -17,6 +17,7 @@ import {
 } from '../entities/task/weekdays';
 import { createProject } from '../services/projectsService';
 import { createTask, updateTask } from '../services/tasksService';
+import { showAppAlert } from './AppDialog';
 
 const MAX_TASK_TITLE_LENGTH = 120;
 const PROGRESS_STEP = 5;
@@ -51,6 +52,7 @@ const getPortalThemeClassName = () => {
   if (typeof document === 'undefined') return '';
   const appRoot = document.querySelector('.tm-app');
   if (appRoot?.classList.contains('tm-theme-classic')) return 'tm-theme-classic';
+  if (appRoot?.classList.contains('tm-theme-hud')) return 'tm-theme-hud';
   return appRoot?.classList.contains('tm-theme-handwritten') ? 'tm-theme-handwritten' : '';
 };
 
@@ -285,14 +287,14 @@ function WeekdaySelector({
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
+    <div className="tm-weekday-selector space-y-2">
+      <div className="tm-weekday-selector-head flex items-center justify-between gap-3">
         <label className="block text-sm tm-label">Дни выполнения</label>
         <span className="text-xs text-amber-200/70">
           {formatAllowedWeekdaysLabel(normalizedValue)}
         </span>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="tm-weekday-quick-row flex flex-wrap gap-2">
         <button
           type="button"
           className={`tm-button tm-button-sm ${
@@ -328,7 +330,7 @@ function WeekdaySelector({
           Выходные
         </button>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="tm-weekday-buttons flex flex-wrap gap-2">
         {(Object.entries(WEEKDAY_LABELS_SHORT) as Array<[string, string]>).map(([weekday, label]) => {
           const numericWeekday = Number(weekday) as AllowedWeekday;
           const active = normalizedValue?.includes(numericWeekday) ?? false;
@@ -345,7 +347,7 @@ function WeekdaySelector({
           );
         })}
       </div>
-      <p className="text-xs text-amber-200/70">
+      <p className="tm-weekday-hint text-xs text-amber-200/70">
         Оставь без выбора, если задачу можно делать в любой день.
       </p>
     </div>
@@ -353,6 +355,17 @@ function WeekdaySelector({
 }
 
 type TaskEditorMode = 'create' | 'edit';
+type EditorChip = 'project' | 'repeat' | 'checklist' | 'deadline' | 'progress' | 'skills' | 'comment';
+
+const EDITOR_CHIP_LABELS: Record<EditorChip, string> = {
+  project: 'Проект',
+  repeat: 'Повтор',
+  checklist: 'Чеклист',
+  deadline: 'Срок',
+  progress: 'Прогресс',
+  skills: 'Навыки',
+  comment: 'Коммент'
+};
 
 export function TaskEditorModal({
   open,
@@ -399,6 +412,7 @@ export function TaskEditorModal({
   const [newProjectTitle, setNewProjectTitle] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [activeChip, setActiveChip] = useState<EditorChip | null>(null);
   const savingRef = useRef(false);
   const portalThemeClassName = getPortalThemeClassName();
 
@@ -444,6 +458,22 @@ export function TaskEditorModal({
       setNewProjectTitle('');
       setNewProjectDescription('');
       setSaving(false);
+      setActiveChip(() => {
+        if (Array.isArray(activeTask.checklist) && activeTask.checklist.length > 0) return 'checklist';
+        if (activeTask.deadline || activeTask.reminder) return 'deadline';
+        if (activeTask.progressEnabled) return 'progress';
+        if (activeTask.skillTags?.length) return 'skills';
+        if (activeTask.comment?.trim()) return 'comment';
+        if (!contextProject && activeTask.projectId) return 'project';
+        if (
+          activeTask.periodicity !== 'one-time' ||
+          activeTask.quota ||
+          normalizeAllowedWeekdays(activeTask.allowedWeekdays)
+        ) {
+          return 'repeat';
+        }
+        return null;
+      });
       savingRef.current = false;
       return;
     }
@@ -468,6 +498,7 @@ export function TaskEditorModal({
     setNewProjectTitle('');
     setNewProjectDescription('');
     setSaving(false);
+    setActiveChip(null);
     savingRef.current = false;
   }, [activeTask, contextProject?.id, defaultBucket, isEditMode, open]);
 
@@ -562,6 +593,9 @@ export function TaskEditorModal({
         Number.isFinite(quotaCountValue) && quotaCountValue > 0
           ? { count: Math.trunc(quotaCountValue), per: quotaPer }
           : undefined;
+      const normalizedAllowedWeekdays = normalizeAllowedWeekdays(allowedWeekdays);
+      const resolvedPeriodicity =
+        periodicity === 'one-time' && normalizedAllowedWeekdays ? 'daily' : periodicity;
 
       if (isEditMode && activeTask) {
         await updateTask({
@@ -569,7 +603,7 @@ export function TaskEditorModal({
           title: trimmedTitle,
           bucket,
           rarity,
-          periodicity,
+          periodicity: resolvedPeriodicity,
           quota,
           xpOverride,
           deadline,
@@ -578,7 +612,7 @@ export function TaskEditorModal({
           comment: commentValue ? commentValue : undefined,
           checklist: normalizedChecklist.length ? normalizedChecklist : undefined,
           skillTags: skillTags.length ? skillTags : undefined,
-          allowedWeekdays,
+          allowedWeekdays: normalizedAllowedWeekdays,
           progressEnabled,
           progressValue: progressEnabled ? normalizedProgress : activeTask.progressValue
         });
@@ -587,7 +621,7 @@ export function TaskEditorModal({
           title: trimmedTitle,
           bucket,
           rarity,
-          periodicity,
+          periodicity: resolvedPeriodicity,
           quota,
           xpOverride,
           deadline,
@@ -596,7 +630,7 @@ export function TaskEditorModal({
           comment: commentValue ? commentValue : undefined,
           checklist: normalizedChecklist.length ? normalizedChecklist : undefined,
           skillTags: skillTags.length ? skillTags : undefined,
-          allowedWeekdays,
+          allowedWeekdays: normalizedAllowedWeekdays,
           progressEnabled,
           progressValue: progressEnabled ? normalizedProgress : undefined
         });
@@ -605,39 +639,105 @@ export function TaskEditorModal({
       await onSaved();
       onClose();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Не удалось сохранить задачу.');
+      await showAppAlert(error instanceof Error ? error.message : 'Не удалось сохранить задачу.');
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
-      <div
-        className={`w-full max-w-md tm-panel tm-task-editor-modal ${portalThemeClassName} p-6 shadow-xl max-h-[85vh] overflow-hidden flex flex-col`}
-      >
-        <div className="space-y-1 mb-4">
-          <h2 className="text-xl font-semibold tm-title">{resolvedTitle}</h2>
-          {contextProject ? (
-            <p className="text-xs text-amber-200/70">Проект: {contextProject.title}</p>
-          ) : null}
-        </div>
-        <div className="space-y-4 overflow-y-auto pr-1 flex-1 min-h-0">
-          <div>
-            <label className="block text-sm tm-label mb-1">Название</label>
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value.slice(0, MAX_TASK_TITLE_LENGTH))}
-              className="tm-input"
-              maxLength={MAX_TASK_TITLE_LENGTH}
-              placeholder="Например: Сделать тренировку"
-              disabled={saving}
-            />
-          </div>
+  const handleAllowedWeekdaysChange = (value: AllowedWeekday[] | undefined) => {
+    const normalized = normalizeAllowedWeekdays(value);
+    setAllowedWeekdays(normalized);
+    if (normalized && periodicity === 'one-time') {
+      setPeriodicity('daily');
+    }
+  };
 
-          {contextProject ? null : (
-            <div className="space-y-2">
+  const selectedProject = projectOptions.find((project) => project.id === projectSelection);
+  const normalizedAllowedWeekdaySelection = normalizeAllowedWeekdays(allowedWeekdays);
+  const effectivePeriodicity =
+    periodicity === 'one-time' && normalizedAllowedWeekdaySelection ? 'daily' : periodicity;
+  const skillTagCount = normalizeSkillTags(skillTagsInput).length;
+  const repeatFilled =
+    effectivePeriodicity !== 'one-time' ||
+    quotaCount.trim().length > 0 ||
+    Boolean(normalizedAllowedWeekdaySelection);
+  const projectFilled =
+    projectSelection === NEW_PROJECT_OPTION_VALUE
+      ? newProjectTitle.trim().length > 0
+      : projectSelection.length > 0;
+  const checklistFilled =
+    checklistDraft.length > 0 || checklistAddInput.trim().length > 0;
+  const deadlineFilled =
+    deadlineInput.trim().length > 0 || reminderInput.trim().length > 0;
+  const progressFilled = progressEnabled;
+  const skillsFilled = skillTagCount > 0;
+  const commentFilled = comment.trim().length > 0;
+
+  const editorChips: Array<{
+    id: EditorChip;
+    label: string;
+    summary: string;
+    filled: boolean;
+  }> = [
+    ...(!contextProject
+      ? [
+          {
+            id: 'project' as const,
+            label: EDITOR_CHIP_LABELS.project,
+            summary:
+              projectSelection === NEW_PROJECT_OPTION_VALUE
+                ? newProjectTitle.trim() || 'Новый'
+                : selectedProject?.title ?? 'Без проекта',
+            filled: projectFilled
+          }
+        ]
+      : []),
+    {
+      id: 'comment',
+      label: EDITOR_CHIP_LABELS.comment,
+      summary: commentFilled ? 'есть' : 'нет',
+      filled: commentFilled
+    },
+    {
+      id: 'repeat',
+      label: EDITOR_CHIP_LABELS.repeat,
+      summary: repeatFilled ? PERIODICITY_LABELS[effectivePeriodicity] : 'Разово',
+      filled: repeatFilled
+    },
+    {
+      id: 'checklist',
+      label: EDITOR_CHIP_LABELS.checklist,
+      summary: checklistDraft.length > 0 ? `${checklistDraft.length}` : checklistAddInput.trim() ? 'черновик' : 'нет',
+      filled: checklistFilled
+    },
+    {
+      id: 'deadline',
+      label: EDITOR_CHIP_LABELS.deadline,
+      summary: deadlineInput ? 'есть' : reminderInput.trim() ? 'напомнить' : 'нет',
+      filled: deadlineFilled
+    },
+    {
+      id: 'progress',
+      label: EDITOR_CHIP_LABELS.progress,
+      summary: progressEnabled ? `${progressValue}%` : 'нет',
+      filled: progressFilled
+    },
+    {
+      id: 'skills',
+      label: EDITOR_CHIP_LABELS.skills,
+      summary: skillTagCount > 0 ? `${skillTagCount}` : 'нет',
+      filled: skillsFilled
+    }
+  ];
+
+  const renderActiveChipPanel = () => {
+    switch (activeChip) {
+      case 'project':
+        return contextProject ? null : (
+          <div className="space-y-3">
+            <div>
               <label className="block text-sm tm-label mb-1">Проект</label>
               <select
                 value={projectSelection}
@@ -653,155 +753,97 @@ export function TaskEditorModal({
                 ))}
                 <option value={NEW_PROJECT_OPTION_VALUE}>+ Новый проект</option>
               </select>
-              {projectSelection === NEW_PROJECT_OPTION_VALUE ? (
-                <div className="tm-panel-soft p-3 space-y-3">
-                  <div>
-                    <label className="block text-xs tm-label mb-1">Название проекта</label>
-                    <input
-                      value={newProjectTitle}
-                      onChange={(event) => setNewProjectTitle(event.target.value)}
-                      className="tm-input"
-                      placeholder="Например: Подготовка к отпуску"
-                      disabled={saving}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs tm-label mb-1">Описание проекта</label>
-                    <textarea
-                      value={newProjectDescription}
-                      onChange={(event) => setNewProjectDescription(event.target.value)}
-                      className="tm-input"
-                      rows={2}
-                      placeholder="Коротко: что сюда входит"
-                      disabled={saving}
-                    />
-                  </div>
+            </div>
+            {projectSelection === NEW_PROJECT_OPTION_VALUE ? (
+              <div className="tm-editor-subpanel space-y-3">
+                <div>
+                  <label className="block text-xs tm-label mb-1">Название проекта</label>
+                  <input
+                    value={newProjectTitle}
+                    onChange={(event) => setNewProjectTitle(event.target.value)}
+                    className="tm-input"
+                    placeholder="Например: Подготовка к отпуску"
+                    disabled={saving}
+                  />
                 </div>
-              ) : null}
-            </div>
-          )}
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="flex-1">
-              <label className="block text-sm tm-label mb-1">Очередь</label>
-              <select
-                value={bucket}
-                onChange={(event) => setBucket(event.target.value as TaskBucket)}
-                className="tm-select"
-                disabled={saving}
-              >
-                {TODAY_QUEUE_TABS.map((queue) => (
-                  <option key={queue} value={queue}>
-                    {QUEUE_LABELS[queue]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm tm-label mb-1">Редкость</label>
-              <select
-                value={rarity}
-                onChange={(event) => setRarity(event.target.value as Rarity)}
-                className="tm-select"
-                disabled={saving}
-              >
-                <option value="common">Common</option>
-                <option value="rare">Rare</option>
-                <option value="epic">Epic</option>
-                <option value="legendary">Legendary</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm tm-label mb-1">Периодичность</label>
-              <select
-                value={periodicity}
-                onChange={(event) => setPeriodicity(event.target.value as Periodicity)}
-                className="tm-select"
-                disabled={saving}
-              >
-                {(Object.keys(PERIODICITY_LABELS) as Periodicity[]).map((item) => (
-                  <option key={item} value={item}>
-                    {PERIODICITY_LABELS[item]}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div>
+                  <label className="block text-xs tm-label mb-1">Описание проекта</label>
+                  <textarea
+                    value={newProjectDescription}
+                    onChange={(event) => setNewProjectDescription(event.target.value)}
+                    className="tm-input"
+                    rows={2}
+                    placeholder="Коротко: что сюда входит"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex-1">
-              <label className="block text-sm tm-label mb-1">Квота</label>
-              <input
-                type="number"
-                min={1}
-                step={1}
-                value={quotaCount}
-                onChange={(event) => setQuotaCount(event.target.value)}
-                className="tm-input"
-                placeholder="Например: 3"
-                disabled={saving}
-              />
-              <p className="text-xs text-amber-200/70 mt-1">Оставьте пустым, если не нужна.</p>
+        );
+      case 'repeat':
+        return (
+          <div className="space-y-3">
+            <div className="tm-editor-repeat-grid">
+              <div className="sm:col-span-1">
+                <label className="block text-sm tm-label mb-1">Периодичность</label>
+                <select
+                  value={periodicity}
+                  onChange={(event) => setPeriodicity(event.target.value as Periodicity)}
+                  className="tm-select"
+                  disabled={saving}
+                >
+                  {(Object.keys(PERIODICITY_LABELS) as Periodicity[]).map((item) => (
+                    <option key={item} value={item}>
+                      {PERIODICITY_LABELS[item]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm tm-label mb-1">Квота</label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={quotaCount}
+                  onChange={(event) => setQuotaCount(event.target.value)}
+                  className="tm-input"
+                  placeholder="Например: 3"
+                  disabled={saving}
+                />
+              </div>
+              <div>
+                <label className="block text-sm tm-label mb-1">Период квоты</label>
+                <select
+                  value={quotaPer}
+                  onChange={(event) => setQuotaPer(event.target.value as 'week' | 'month')}
+                  className="tm-select"
+                  disabled={saving}
+                >
+                  <option value="week">Неделя</option>
+                  <option value="month">Месяц</option>
+                </select>
+              </div>
             </div>
-            <div className="flex-1">
-              <label className="block text-sm tm-label mb-1">Период квоты</label>
-              <select
-                value={quotaPer}
-                onChange={(event) => setQuotaPer(event.target.value as 'week' | 'month')}
-                className="tm-select"
-                disabled={saving}
-              >
-                <option value="week">Неделя</option>
-                <option value="month">Месяц</option>
-              </select>
-            </div>
-          </div>
-
-          <WeekdaySelector
-            value={allowedWeekdays}
-            onChange={setAllowedWeekdays}
-            disabled={saving}
-          />
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm tm-label">Ценность</label>
-              <span className="text-sm text-amber-100">{value}</span>
-            </div>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              step={1}
-              value={value}
-              onChange={(event) => setValue(Number(event.target.value))}
-              className="tm-range"
-              disabled={saving}
-            />
-            <div className="flex justify-between text-xs text-amber-200/70 mt-1">
-              <span>1</span>
-              <span>10</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm tm-label mb-1">Комментарий</label>
-            <textarea
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              className="tm-input"
-              rows={3}
-              placeholder="Например: детали, на что обратить внимание"
+            <WeekdaySelector
+              value={allowedWeekdays}
+              onChange={handleAllowedWeekdaysChange}
               disabled={saving}
             />
           </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm tm-label mb-1">Checklist</label>
+        );
+      case 'checklist':
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="tm-label text-sm">Чеклист</p>
+              <span className="text-xs text-amber-200/70">{checklistDraft.length} пунктов</span>
+            </div>
             {checklistDraft.length > 0 ? (
               <div className="space-y-2">
                 {checklistDraft.map((item) => (
-                  <div key={item.id} className="flex items-start gap-2">
+                  <div key={item.id} className="tm-editor-checklist-row">
                     <input
                       type="checkbox"
                       checked={item.done}
@@ -831,13 +873,14 @@ export function TaskEditorModal({
             )}
             <div className="space-y-2">
               <label className="block text-xs tm-label">
-                Checklist (one item per line; supports '-' or '1.' prefixes)
+                Новые пункты, по одному на строку
               </label>
               <textarea
                 value={checklistAddInput}
                 onChange={(event) => setChecklistAddInput(event.target.value)}
                 className="tm-input"
                 rows={3}
+                placeholder="- купить продукты&#10;- приготовить ужин"
                 disabled={saving}
               />
               <div className="flex justify-end">
@@ -852,10 +895,12 @@ export function TaskEditorModal({
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="flex-1">
-              <label className="block text-sm tm-label mb-1">Дедлайн</label>
+        );
+      case 'deadline':
+        return (
+          <div className="tm-editor-deadline-grid">
+            <div>
+              <label className="block text-sm tm-label mb-1">Срок</label>
               <input
                 type="datetime-local"
                 value={deadlineInput}
@@ -864,8 +909,8 @@ export function TaskEditorModal({
                 disabled={saving}
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm tm-label mb-1">Напоминание (мин. до)</label>
+            <div>
+              <label className="block text-sm tm-label mb-1">Напомнить за, мин.</label>
               <input
                 type="number"
                 min={0}
@@ -876,11 +921,15 @@ export function TaskEditorModal({
                 placeholder="Например: 60"
                 disabled={saving}
               />
-              <p className="text-xs text-amber-200/70">Работает при указанном дедлайне.</p>
             </div>
+            <p className="tm-editor-hint text-xs text-amber-200/70">
+              Напоминание работает только со сроком.
+            </p>
           </div>
-
-          <div className="space-y-2">
+        );
+      case 'progress':
+        return (
+          <div className="space-y-3">
             <label className="flex items-center gap-2 text-sm tm-label">
               <input
                 type="checkbox"
@@ -889,7 +938,7 @@ export function TaskEditorModal({
                 className="h-4 w-4 accent-amber-500"
                 disabled={saving}
               />
-              Прогресс
+              Отслеживать прогресс
             </label>
             {progressEnabled ? (
               <TaskProgressControls
@@ -897,9 +946,13 @@ export function TaskEditorModal({
                 onChange={setProgressValue}
                 disabled={saving}
               />
-            ) : null}
+            ) : (
+              <p className="text-xs text-amber-200/70">Включи, если задаче нужен процент выполнения.</p>
+            )}
           </div>
-
+        );
+      case 'skills':
+        return (
           <SkillTagsInput
             value={skillTagsInput}
             onChange={setSkillTagsInput}
@@ -907,25 +960,142 @@ export function TaskEditorModal({
             disabled={saving}
             placeholder="Например: Готовка, Excel"
           />
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="tm-button tm-button-ghost"
+        );
+      case 'comment':
+        return (
+          <div>
+            <label className="block text-sm tm-label mb-1">Комментарий</label>
+            <textarea
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              className="tm-input"
+              rows={4}
+              placeholder="Например: детали, на что обратить внимание"
               disabled={saving}
-            >
-              Отмена
-            </button>
-            <button
-              type="button"
-              onClick={submit}
-              className="tm-button tm-button-primary"
-              disabled={saving}
-            >
-              {saving ? 'Сохранение...' : isEditMode ? 'Сохранить' : 'Создать'}
-            </button>
+            />
           </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="tm-modal-overlay tm-task-editor-overlay fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
+      <div
+        className={`w-full max-w-lg tm-panel tm-task-editor-modal ${portalThemeClassName} p-4 sm:p-5 shadow-xl max-h-[85vh] overflow-hidden flex flex-col`}
+      >
+        <div className="tm-editor-header">
+          <h2 className="text-xl font-semibold tm-title">{resolvedTitle}</h2>
+          {contextProject ? (
+            <p className="text-xs text-amber-200/70">Проект: {contextProject.title}</p>
+          ) : null}
+        </div>
+        <div className="tm-editor-body overflow-y-auto pr-1 flex-1 min-h-0">
+          <div className="tm-editor-core">
+            <label className="block text-sm tm-label mb-1">Название</label>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value.slice(0, MAX_TASK_TITLE_LENGTH))}
+              className="tm-input"
+              maxLength={MAX_TASK_TITLE_LENGTH}
+              placeholder="Например: Сделать тренировку"
+              disabled={saving}
+            />
+          </div>
+
+          <div className="tm-editor-core-grid">
+            <div>
+              <label className="block text-sm tm-label mb-1">Очередь</label>
+              <select
+                value={bucket}
+                onChange={(event) => setBucket(event.target.value as TaskBucket)}
+                className="tm-select"
+                disabled={saving}
+              >
+                {TODAY_QUEUE_TABS.map((queue) => (
+                  <option key={queue} value={queue}>
+                    {QUEUE_LABELS[queue]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm tm-label mb-1">Редкость</label>
+              <select
+                value={rarity}
+                onChange={(event) => setRarity(event.target.value as Rarity)}
+                className="tm-select"
+                disabled={saving}
+              >
+                <option value="common">Common</option>
+                <option value="rare">Rare</option>
+                <option value="epic">Epic</option>
+                <option value="legendary">Legendary</option>
+              </select>
+            </div>
+            <div className="tm-editor-value-control">
+              <label className="block text-sm tm-label">Ценность</label>
+              <span className="text-sm text-amber-100">{value}</span>
+              <input
+                type="range"
+                min={1}
+                max={10}
+                step={1}
+                value={value}
+                onChange={(event) => setValue(Number(event.target.value))}
+                className="tm-range"
+                disabled={saving}
+              />
+              <div className="flex justify-between text-xs text-amber-200/70">
+                <span>1</span>
+                <span>10</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="tm-editor-chip-row" aria-label="Дополнительные параметры задачи">
+            {editorChips.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => setActiveChip((current) => (current === chip.id ? null : chip.id))}
+                className={`tm-editor-chip ${
+                  activeChip === chip.id ? 'tm-editor-chip-active' : ''
+                } ${chip.filled ? 'tm-editor-chip-filled' : ''}`}
+                aria-pressed={activeChip === chip.id}
+                disabled={saving}
+              >
+                <span>{chip.label}</span>
+                <span className="tm-editor-chip-summary">{chip.summary}</span>
+              </button>
+            ))}
+          </div>
+
+          {activeChip ? (
+            <section className="tm-panel-soft tm-editor-chip-panel p-3">
+              {renderActiveChipPanel()}
+            </section>
+          ) : null}
+        </div>
+
+        <div className="tm-editor-footer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="tm-button tm-button-ghost"
+            disabled={saving}
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            className="tm-button tm-button-primary"
+            disabled={saving}
+          >
+            {saving ? 'Сохранение...' : isEditMode ? 'Сохранить' : 'Создать'}
+          </button>
         </div>
       </div>
     </div>

@@ -54,8 +54,25 @@ export const suggestTaskBucket = (
   return task.rarity === 'common' ? 'backlog' : 'next';
 };
 
-export const ensureTaskBucket = (task: Task): Task => ({
-  ...task,
-  allowedWeekdays: normalizeAllowedWeekdays(task.allowedWeekdays),
-  bucket: suggestTaskBucket(task)
-});
+export const normalizeTaskSchedule = (
+  task: Pick<Task, 'periodicity'> & Partial<Pick<Task, 'allowedWeekdays'>>
+) => {
+  const allowedWeekdays = normalizeAllowedWeekdays(task.allowedWeekdays);
+  return {
+    allowedWeekdays,
+    periodicity:
+      task.periodicity === 'one-time' && allowedWeekdays ? 'daily' : task.periodicity
+  };
+};
+
+export const ensureTaskBucket = (task: Task): Task => {
+  const schedule = normalizeTaskSchedule(task);
+  const normalizedTask = {
+    ...task,
+    ...schedule
+  };
+  return {
+    ...normalizedTask,
+    bucket: suggestTaskBucket(normalizedTask)
+  };
+};

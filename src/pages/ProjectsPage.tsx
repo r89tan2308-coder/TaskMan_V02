@@ -619,7 +619,7 @@ export function ProjectsPage() {
             <>
               <section className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h1 className="text-3xl font-semibold tm-title">Projects</h1>
+                  <h1 className="sr-only">Projects</h1>
                   <p className="text-sm text-amber-200/80">
                     Контейнеры для больших целей. Прогресс считается по обычным задачам.
                   </p>

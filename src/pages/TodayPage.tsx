@@ -8,6 +8,7 @@ import {
   type ReactNode
 } from 'react';
 import { createPortal } from 'react-dom';
+import { showAppAlert, showAppConfirm } from '../components/AppDialog';
 import { TaskEditorModal } from '../components/TaskEditorModal';
 import { Project } from '../entities/project/types';
 import {
@@ -38,6 +39,7 @@ import { xpForTask } from '../logic/xp';
 import { computeTaskDailyStreak } from '../logic/streak';
 import { LedgerEvent } from '../entities/ledger/types';
 import { StreakState } from '../entities/streak/types';
+import { emitPetEvent } from '../features/pet/petEvents';
 
 type TaskFilter = 'all' | Periodicity;
 type TaskSort = 'manual' | 'rarity' | 'createdAt';
@@ -136,6 +138,7 @@ const getPortalThemeClassName = () => {
   if (typeof document === 'undefined') return '';
   const appRoot = document.querySelector('.tm-app');
   if (appRoot?.classList.contains('tm-theme-classic')) return 'tm-theme-classic';
+  if (appRoot?.classList.contains('tm-theme-hud')) return 'tm-theme-hud';
   return appRoot?.classList.contains('tm-theme-handwritten') ? 'tm-theme-handwritten' : '';
 };
 
@@ -790,7 +793,7 @@ function CalendarModal({
   if (!open || !task) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
+    <div className="tm-modal-overlay fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
       <div className="w-full max-w-md tm-panel p-6 shadow-xl max-h-[85vh] overflow-y-auto">
         <h2 className="text-xl font-semibold tm-title mb-2">Add to Calendar</h2>
         <p className="text-sm text-amber-200/80 mb-4">{task.title}</p>
@@ -816,6 +819,65 @@ function CalendarModal({
               className="tm-button tm-button-gold"
             >
               Download .ics
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LogDateModal({
+  open,
+  task,
+  value,
+  busy,
+  onChange,
+  onCancel,
+  onConfirm
+}: {
+  open: boolean;
+  task: Task | null;
+  value: string;
+  busy: boolean;
+  onChange: (value: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!open || !task) return null;
+
+  return (
+    <div className="tm-modal-overlay fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
+      <div className="w-full max-w-md tm-panel p-6 shadow-xl max-h-[85vh] overflow-y-auto">
+        <h2 className="text-xl font-semibold tm-title mb-2">Записать на дату</h2>
+        <p className="text-sm text-amber-200/80 mb-4">{task.title}</p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm tm-label mb-1">Дата и время</label>
+            <input
+              type="datetime-local"
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              className="tm-input"
+              disabled={busy}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="tm-button tm-button-ghost"
+              disabled={busy}
+            >
+              Отмена
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="tm-button tm-button-gold"
+              disabled={busy}
+            >
+              {busy ? 'Запись...' : 'Записать'}
             </button>
           </div>
         </div>
@@ -1439,15 +1501,17 @@ function TodayRewardStrip({
             {nextReward ? nextReward.name : 'Награда не выбрана'}
           </h2>
         </div>
+        {nextReward ? (
+          <p className="tm-today-reward-remaining tm-today-reward-header-remaining">
+            {remainingXp > 0 ? `Осталось ${remainingXp} XP` : 'Награда уже открыта'}
+          </p>
+        ) : null}
       </div>
       {nextReward ? (
         <>
           <div className="tm-today-reward-meta">
             <p className="tm-today-reward-progress-value">
               {rewardProgressValue} / {nextReward.cost} XP
-            </p>
-            <p className="tm-today-reward-remaining">
-              {remainingXp > 0 ? `Осталось ${remainingXp} XP` : 'Награда уже открыта'}
             </p>
           </div>
           <RewardProgressBar value={rewardProgressPercent} />
@@ -1740,6 +1804,7 @@ function ExecutionTaskCard({
   onEdit,
   onDelete,
   onSkip,
+  onLogAtDate,
   onAddToCalendar,
   onProgressChange,
   onChecklistItemToggle,
@@ -1775,6 +1840,7 @@ function ExecutionTaskCard({
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onSkip: (task: Task) => void;
+  onLogAtDate: (task: Task) => void;
   onAddToCalendar: (task: Task) => void;
   onProgressChange: (task: Task, value: number) => void;
   onChecklistItemToggle: (task: Task, itemId: string) => void;
@@ -2072,6 +2138,15 @@ function ExecutionTaskCard({
               <button
                 type="button"
                 className="tm-task-overflow-item"
+                onClick={() => runMenuAction(() => onLogAtDate(task))}
+                disabled={busy}
+                role="menuitem"
+              >
+                Записать на дату
+              </button>
+              <button
+                type="button"
+                className="tm-task-overflow-item"
                 onClick={() => runMenuAction(() => onAddToCalendar(task))}
                 disabled={busy}
                 role="menuitem"
@@ -2184,8 +2259,8 @@ export function TodayPage() {
   const [adding, setAdding] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loggingTaskId, setLoggingTaskId] = useState<string | null>(null);
-  const [useCustomLogDate, setUseCustomLogDate] = useState(false);
-  const [customLogDateInput, setCustomLogDateInput] = useState(() => toLocalInputValue(new Date()));
+  const [logDateTask, setLogDateTask] = useState<Task | null>(null);
+  const [logDateValue, setLogDateValue] = useState(() => toLocalInputValue(new Date()));
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [calendarTask, setCalendarTask] = useState<Task | null>(null);
   const [calendarValue, setCalendarValue] = useState('');
@@ -2804,17 +2879,6 @@ export function TodayPage() {
     return sortedRewards.find((reward) => reward.cost > xp) ?? sortedRewards[sortedRewards.length - 1];
   }, [pinnedRewards, rewards, xp]);
 
-  const setLogDateToNow = () => {
-    setCustomLogDateInput(toLocalInputValue(new Date()));
-  };
-
-  const resolveLogOccurredAt = () => {
-    if (!useCustomLogDate) return Date.now();
-    const parsed = parseLocalDateTime(customLogDateInput);
-    if (!parsed) return null;
-    return parsed.getTime();
-  };
-
   useEffect(() => {
     if (!DEBUG_COUNTS) return;
     console.groupCollapsed('[TodayPage] UI counts');
@@ -2866,12 +2930,7 @@ export function TodayPage() {
     filter
   ]);
 
-  const logTask = async (task: Task, missed: boolean) => {
-    const occurredAt = resolveLogOccurredAt();
-    if (occurredAt === null) {
-      alert('Укажите корректную дату и время события.');
-      return;
-    }
+  const logTask = async (task: Task, missed: boolean, occurredAt = Date.now()) => {
     setLoggingTaskId(task.id);
     try {
       const result = await logTaskEvent(task, missed ? 'TASK_MISSED' : 'TASK_DONE', occurredAt);
@@ -2884,9 +2943,19 @@ export function TodayPage() {
             : `Сделано: ${task.title}`,
           xpDelta: result.projectBonus?.bonusXp ?? Math.max(0, result.event.deltaXp)
         });
+        emitPetEvent({
+          type: 'task-completed',
+          taskTitle: task.title,
+          xpDelta: result.projectBonus?.bonusXp ?? Math.max(0, result.event.deltaXp)
+        });
       }
     } catch (error) {
-      alert(missed ? 'Не удалось отметить задачу как пропущенную.' : 'Не удалось завершить задачу.');
+      if (!missed) {
+        emitPetEvent({ type: 'operation-failed' });
+      }
+      await showAppAlert(
+        missed ? 'Не удалось отметить задачу как пропущенную.' : 'Не удалось завершить задачу.'
+      );
       await load();
     } finally {
       setLoggingTaskId(null);
@@ -2895,11 +2964,6 @@ export function TodayPage() {
 
   const triggerTaskCompletion = (task: Task, origin?: { x: number; y: number }) => {
     if (pendingTaskCompletion || loggingTaskId) return;
-    const occurredAt = resolveLogOccurredAt();
-    if (occurredAt === null) {
-      alert('Укажите корректную дату и время события.');
-      return;
-    }
     setPlanningTaskId(null);
     setPendingTaskCompletion({
       taskId: task.id
@@ -2939,13 +3003,31 @@ export function TodayPage() {
     }, delayMs);
   };
 
+  const openLogDateModal = (task: Task) => {
+    setPlanningTaskId(null);
+    setLogDateTask(task);
+    setLogDateValue(toLocalInputValue(new Date()));
+  };
+
+  const confirmLogDate = async () => {
+    if (!logDateTask) return;
+    const occurredAt = parseLocalDateTime(logDateValue);
+    if (!occurredAt) {
+      await showAppAlert('Укажите корректную дату и время события.');
+      return;
+    }
+    const task = logDateTask;
+    await logTask(task, false, occurredAt.getTime());
+    setLogDateTask(null);
+  };
+
   const undoTask = async (task: Task) => {
     setLoggingTaskId(task.id);
     try {
       await logTaskEvent(task, 'TASK_UNDO', Date.now());
       await load();
     } catch (error) {
-      alert('Не удалось отменить выполнение задачи.');
+      await showAppAlert('Не удалось отменить выполнение задачи.');
       await load();
     } finally {
       setLoggingTaskId(null);
@@ -2953,14 +3035,18 @@ export function TodayPage() {
   };
 
   const undoHistoryEntry = async (entry: CompletedHistoryEntry) => {
-    const confirmed = window.confirm('Убрать эту запись о выполнении из истории?');
+    const confirmed = await showAppConfirm({
+      message: 'Убрать эту запись о выполнении из истории?',
+      confirmLabel: 'Убрать',
+      tone: 'danger'
+    });
     if (!confirmed) return;
     setRemovingHistoryEventId(entry.eventId);
     try {
       await deleteEvent(entry.eventId);
       await load();
     } catch (error) {
-      alert('Не удалось убрать запись из истории.');
+      await showAppAlert('Не удалось убрать запись из истории.');
       await load();
     } finally {
       setRemovingHistoryEventId(null);
@@ -2968,7 +3054,11 @@ export function TodayPage() {
   };
 
   const deleteTaskItem = async (task: Task) => {
-    const confirmed = window.confirm(`Удалить задачу "${task.title}"?`);
+    const confirmed = await showAppConfirm({
+      message: `Удалить задачу "${task.title}"?`,
+      confirmLabel: 'Удалить',
+      tone: 'danger'
+    });
     if (!confirmed) return;
     setDeletingTaskId(task.id);
     try {
@@ -2984,11 +3074,11 @@ export function TodayPage() {
           meta: { eventType: 'TASK_DELETE', refId: task.id, title: task.title }
         });
       } catch (error) {
-        alert('Task deleted, but failed to add a ledger record.');
+        await showAppAlert('Task deleted, but failed to add a ledger record.');
       }
       await load();
     } catch (error) {
-      alert('Failed to delete task.');
+      await showAppAlert('Failed to delete task.');
     } finally {
       setDeletingTaskId(null);
     }
@@ -3003,7 +3093,7 @@ export function TodayPage() {
     try {
       await updateTask(nextTask);
     } catch (error) {
-      alert('Failed to update progress.');
+      await showAppAlert('Failed to update progress.');
       await load();
     }
   };
@@ -3020,7 +3110,7 @@ export function TodayPage() {
     try {
       await updateTask(nextTask);
     } catch (error) {
-      alert('Failed to update checklist.');
+      await showAppAlert('Failed to update checklist.');
       await load();
     }
   };
@@ -3065,7 +3155,7 @@ export function TodayPage() {
     if (!calendarTask) return;
     const due = parseLocalDateTime(calendarValue);
     if (!due) {
-      alert('Invalid date/time.');
+      void showAppAlert('Invalid date/time.');
       return;
     }
     downloadCalendar(calendarTask, due);
@@ -3113,7 +3203,7 @@ export function TodayPage() {
       await Promise.all(reorderedWithSort.map((task) => updateTask(task)));
       await load();
     } catch (error) {
-      alert('Failed to reorder tasks.');
+      await showAppAlert('Failed to reorder tasks.');
       await load();
     }
   };
@@ -3204,7 +3294,7 @@ export function TodayPage() {
     try {
       await updateTask(nextTask);
     } catch (error) {
-      alert('Не удалось перенести задачу.');
+      await showAppAlert('Не удалось перенести задачу.');
       await load();
     }
   };
@@ -3270,6 +3360,7 @@ export function TodayPage() {
           setPlanningTaskId(null);
           void logTask(nextTask, true);
         }}
+        onLogAtDate={openLogDateModal}
         onAddToCalendar={addToCalendar}
         onProgressChange={(nextTask, value) => {
           void updateTaskProgress(nextTask, value);
@@ -3293,15 +3384,17 @@ export function TodayPage() {
   };
 
   const queueTabsSection = (
-    <section className="flex flex-wrap gap-2">
+    <section className="tm-queue-tabs" aria-label="Очереди задач">
       {TODAY_QUEUE_TABS.map((queue) => (
         <button
           key={queue}
           type="button"
           onClick={() => openQueueTab(queue)}
-          className={`tm-button ${activeQueue === queue ? 'tm-button-gold' : 'tm-button-ghost'} tm-button-sm`}
+          className={`tm-queue-tab ${activeQueue === queue ? 'tm-queue-tab-active' : ''}`}
+          aria-pressed={activeQueue === queue}
         >
-          {QUEUE_LABELS[queue]} · {queueCounts[queue]}
+          <span>{QUEUE_LABELS[queue]}</span>
+          <span className="tm-queue-tab-count">{queueCounts[queue]}</span>
         </button>
       ))}
     </section>
@@ -3451,28 +3544,6 @@ export function TodayPage() {
                           </option>
                         ))}
                       </select>
-                    </div>
-                    <div className="pt-2 tm-divider space-y-2">
-                      <label className="flex items-center gap-2 text-xs text-amber-200/90">
-                        <input
-                          type="checkbox"
-                          checked={useCustomLogDate}
-                          onChange={(event) => {
-                            const nextChecked = event.target.checked;
-                            setUseCustomLogDate(nextChecked);
-                            if (nextChecked) setLogDateToNow();
-                          }}
-                          className="h-4 w-4 accent-amber-500"
-                        />
-                        Своя дата для логирования
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={customLogDateInput}
-                        onChange={(event) => setCustomLogDateInput(event.target.value)}
-                        className="tm-input h-9 text-xs"
-                        disabled={!useCustomLogDate}
-                      />
                     </div>
                   </div>
                 ) : null}
@@ -3671,6 +3742,17 @@ export function TodayPage() {
         onChange={setCalendarValue}
         onCancel={() => setCalendarTask(null)}
         onConfirm={confirmCalendar}
+      />
+      <LogDateModal
+        open={logDateTask !== null}
+        task={logDateTask}
+        value={logDateValue}
+        busy={logDateTask ? loggingTaskId === logDateTask.id : false}
+        onChange={setLogDateValue}
+        onCancel={() => setLogDateTask(null)}
+        onConfirm={() => {
+          void confirmLogDate();
+        }}
       />
       <EditTaskModal
         open={editingTask !== null}

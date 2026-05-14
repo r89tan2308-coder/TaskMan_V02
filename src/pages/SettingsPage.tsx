@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { showAppAlert, showAppConfirm } from '../components/AppDialog';
 import {
   readAllForExport,
   replaceAllFromImport
@@ -12,10 +13,24 @@ import {
   buildPlanExportPayload,
   preparePlanImportPreview
 } from '../services/planTransferService';
+import { reminderCopy } from '../i18n/reminders';
 import { getXpBalance } from '../services/xpService';
+import {
+  getNotificationPermissionState,
+  requestNotificationPermission,
+  type NotificationPermissionState
+} from '../services/notificationService';
+import {
+  getReminderSettings,
+  normalizeReminderSettings,
+  runReminderCheck,
+  updateReminderSettings,
+  type ReminderSettings
+} from '../services/reminderService';
+import type { PetMotionMode } from '../features/pet/petPreferences';
 import { requestPwaUpdate } from '../pwa';
 
-type InterfaceTheme = 'classic' | 'vault' | 'handwritten';
+type InterfaceTheme = 'classic' | 'vault' | 'handwritten' | 'hud';
 
 const PLAN_BUCKET_LABELS: Record<TaskBucket, string> = {
   today: 'Today',
@@ -70,6 +85,11 @@ export function SettingsPage({
   onInterfaceChange,
   handwrittenBackground,
   onHandwrittenBackgroundChange,
+  petEnabled,
+  petMotionMode,
+  onPetEnabledChange,
+  onPetMotionModeChange,
+  onPetPositionReset,
   tetrisAvailable
 }: {
   onNavigate: (target: 'ledger' | 'log' | 'manual' | 'tetris') => void;
@@ -77,6 +97,11 @@ export function SettingsPage({
   onInterfaceChange: (theme: InterfaceTheme) => Promise<void>;
   handwrittenBackground: string | null;
   onHandwrittenBackgroundChange: (value: string | null) => Promise<void>;
+  petEnabled: boolean;
+  petMotionMode: PetMotionMode;
+  onPetEnabledChange: (enabled: boolean) => Promise<void>;
+  onPetMotionModeChange: (mode: PetMotionMode) => Promise<void>;
+  onPetPositionReset: () => Promise<void>;
   tetrisAvailable: boolean;
 }) {
   const [exporting, setExporting] = useState(false);
@@ -86,6 +111,7 @@ export function SettingsPage({
   >('idle');
   const [interfaceOpen, setInterfaceOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [xp, setXp] = useState(0);
   const [editingXp, setEditingXp] = useState(false);
   const [xpDraft, setXpDraft] = useState('');
@@ -103,12 +129,20 @@ export function SettingsPage({
     projectClientIds: [],
     taskIds: []
   });
+  const [reminderSettings, setReminderSettings] = useState<ReminderSettings>(
+    normalizeReminderSettings(undefined)
+  );
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermissionState>(() => getNotificationPermissionState());
+  const [notificationHelpText, setNotificationHelpText] = useState<string | null>(null);
 
   const interfaceLabel =
     interfaceTheme === 'vault'
       ? 'Retro'
       : interfaceTheme === 'handwritten'
       ? 'Рукописный'
+      : interfaceTheme === 'hud'
+      ? 'HUD'
       : 'Classic';
   const updateStatusLabel =
     updateStatus === 'checking'
@@ -126,6 +160,20 @@ export function SettingsPage({
       : updateStatus === 'reloading'
       ? 'text-emerald-200/80'
       : 'text-amber-200/70';
+  const notificationPermissionLabel =
+    notificationPermission === 'granted'
+      ? reminderCopy.permissionGranted
+      : notificationPermission === 'denied'
+      ? reminderCopy.permissionDenied
+      : notificationPermission === 'default'
+      ? reminderCopy.permissionDefault
+      : reminderCopy.permissionUnsupported;
+  const notificationPermissionClass =
+    notificationPermission === 'granted'
+      ? 'text-emerald-200/80'
+      : notificationPermission === 'denied'
+      ? 'text-red-300/80'
+      : 'text-amber-200/70';
 
   useEffect(() => {
     const loadXp = async () => {
@@ -133,6 +181,15 @@ export function SettingsPage({
       setXp(balance);
     };
     void loadXp();
+  }, []);
+
+  useEffect(() => {
+    const loadReminderSettings = async () => {
+      const settings = await getReminderSettings();
+      setReminderSettings(settings);
+      setNotificationPermission(getNotificationPermissionState());
+    };
+    void loadReminderSettings();
   }, []);
 
   const downloadJsonFile = (filename: string, payload: unknown) => {
@@ -171,14 +228,16 @@ export function SettingsPage({
       try {
         const text = await file.text();
         const payload = JSON.parse(text);
-        const confirmed = window.confirm(
-          'Это полностью заменит локальные данные. Продолжить?'
-        );
+        const confirmed = await showAppConfirm({
+          message: 'Это полностью заменит локальные данные. Продолжить?',
+          confirmLabel: 'Продолжить',
+          tone: 'danger'
+        });
         if (!confirmed) return;
         await replaceAllFromImport(payload);
         window.location.reload();
       } catch (error) {
-        alert('Не удалось импортировать backup.');
+        await showAppAlert('Не удалось импортировать backup.');
       } finally {
         event.target.value = '';
       }
@@ -255,12 +314,83 @@ export function SettingsPage({
     }
   };
 
+  const syncNotificationPermission = () => {
+    const permission = getNotificationPermissionState();
+    setNotificationPermission(permission);
+    return permission;
+  };
+
+  const explainNotificationBlock = (permission: NotificationPermissionState) => {
+    if (permission === 'denied') {
+      setNotificationHelpText(reminderCopy.deniedHint);
+      return;
+    }
+    if (permission === 'unsupported') {
+      setNotificationHelpText(reminderCopy.unsupportedHint);
+      return;
+    }
+    setNotificationHelpText(null);
+  };
+
+  const handleEnableNotifications = async () => {
+    const permission = await requestNotificationPermission();
+    setNotificationPermission(permission);
+    explainNotificationBlock(permission);
+    if (permission === 'granted') {
+      setNotificationHelpText(null);
+      void runReminderCheck();
+    }
+  };
+
+  const ensureNotificationsForReminder = async () => {
+    const current = syncNotificationPermission();
+    if (current === 'granted') return true;
+    if (current === 'denied' || current === 'unsupported') {
+      explainNotificationBlock(current);
+      return false;
+    }
+
+    const requested = await requestNotificationPermission();
+    setNotificationPermission(requested);
+    explainNotificationBlock(requested);
+    return requested === 'granted';
+  };
+
+  const handleReminderToggle = async (
+    key:
+      | 'eveningReviewEnabled'
+      | 'morningCheckInEnabled'
+      | 'overdueReminderEnabled',
+    enabled: boolean
+  ) => {
+    if (enabled) {
+      const allowed = await ensureNotificationsForReminder();
+      if (!allowed) return;
+    }
+    const next = await updateReminderSettings({ [key]: enabled });
+    setReminderSettings(next);
+    if (enabled) void runReminderCheck();
+  };
+
+  const handleReminderTimeChange = async (
+    key: 'eveningReviewTime' | 'morningCheckInTime',
+    value: string
+  ) => {
+    const next = await updateReminderSettings({ [key]: value });
+    setReminderSettings(next);
+    void runReminderCheck();
+  };
+
   const handleInterfaceToggle = () => {
     setInterfaceOpen((prev) => !prev);
   };
 
   const handleTransferToggle = () => {
     setTransferOpen((prev) => !prev);
+  };
+
+  const handleNotificationsToggle = () => {
+    setNotificationsOpen((prev) => !prev);
   };
 
   const handleThemeChange = async (next: InterfaceTheme) => {
@@ -285,7 +415,7 @@ export function SettingsPage({
         await onHandwrittenBackgroundChange(dataUrl);
       }
     } catch (error) {
-      alert('Failed to read background image.');
+      await showAppAlert('Failed to read background image.');
     } finally {
       event.target.value = '';
     }
@@ -303,7 +433,7 @@ export function SettingsPage({
   const handleSaveXp = async () => {
     const parsed = Number(xpDraft);
     if (!Number.isFinite(parsed)) {
-      alert('Invalid XP value.');
+      await showAppAlert('Invalid XP value.');
       return;
     }
 
@@ -327,7 +457,7 @@ export function SettingsPage({
       setXp(nextXp);
       setEditingXp(false);
     } catch (error) {
-      alert('Failed to update XP.');
+      await showAppAlert('Failed to update XP.');
     } finally {
       setSavingXp(false);
     }
@@ -433,8 +563,8 @@ export function SettingsPage({
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
-        <div className="tm-frame tm-reveal space-y-4 p-3 sm:p-6">
-          <h1 className="text-3xl font-semibold tm-title">Settings</h1>
+        <div className="tm-frame tm-settings-frame tm-reveal space-y-4 p-3 sm:p-6">
+          <h1 className="sr-only">Settings</h1>
           <div className="space-y-2">
             <p className="tm-label">Sections</p>
             <div className="flex flex-wrap items-center gap-2">
@@ -508,6 +638,14 @@ export function SettingsPage({
                   >
                     Рукописный
                   </button>
+                  <button
+                    onClick={() => handleThemeChange('hud')}
+                    className={`tm-button ${
+                      interfaceTheme === 'hud' ? 'tm-button-gold' : 'tm-button-ghost'
+                    }`}
+                  >
+                    HUD
+                  </button>
                 </div>
                 {interfaceTheme === 'handwritten' ? (
                   <div className="pt-2 space-y-2">
@@ -532,6 +670,49 @@ export function SettingsPage({
                     </div>
                   </div>
                 ) : null}
+                <div className="border-t border-amber-400/10 pt-3 space-y-2">
+                  <label className="flex flex-wrap items-center gap-2 text-sm tm-label">
+                    <input
+                      type="checkbox"
+                      checked={petEnabled}
+                      onChange={(event) => void onPetEnabledChange(event.target.checked)}
+                      className="h-4 w-4 accent-amber-500"
+                    />
+                    Vexa companion
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-amber-200/70">Motion</span>
+                    {(['full', 'reduced', 'static'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => void onPetMotionModeChange(mode)}
+                        className={`tm-button tm-button-sm ${
+                          petMotionMode === mode ? 'tm-button-gold' : 'tm-button-ghost'
+                        }`}
+                        disabled={!petEnabled}
+                        aria-pressed={petMotionMode === mode}
+                      >
+                        {mode === 'full' ? 'Full' : mode === 'reduced' ? 'Reduced' : 'Static'}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => void onPetPositionReset()}
+                      className="tm-button tm-button-sm tm-button-ghost"
+                    >
+                      Return Vexa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onPetEnabledChange(false)}
+                      className="tm-button tm-button-sm tm-button-ghost"
+                      disabled={!petEnabled}
+                    >
+                      Hide Vexa
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : null}
           </div>
@@ -594,7 +775,132 @@ export function SettingsPage({
               ) : null}
           </div>
           <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleNotificationsToggle}
+                className="tm-button tm-button-steel"
+                aria-expanded={notificationsOpen}
+              >
+                {reminderCopy.enableNotifications}
+              </button>
+              <span className={`text-sm ${notificationPermissionClass}`}>
+                {notificationPermissionLabel}
+              </span>
+            </div>
+
+            {notificationsOpen ? (
+              <div className="tm-panel-soft p-3 space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="tm-label">{reminderCopy.browserNotifications}</p>
+                    <p className="max-w-2xl text-xs leading-relaxed text-amber-200/65">
+                      {reminderCopy.quietHint}
+                    </p>
+                  </div>
+                  {notificationPermission !== 'granted' ? (
+                    <button
+                      type="button"
+                      onClick={handleEnableNotifications}
+                      className="tm-button tm-button-primary"
+                      disabled={notificationPermission === 'unsupported'}
+                    >
+                      Разрешить в браузере
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void runReminderCheck()}
+                      className="tm-button tm-button-ghost"
+                    >
+                      Проверить сейчас
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-amber-100">{reminderCopy.notificationPermission}:</span>
+                  <span className={notificationPermissionClass}>{notificationPermissionLabel}</span>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <label className="rounded border border-amber-400/15 p-3 space-y-2">
+                    <span className="flex items-center gap-2 text-sm tm-label">
+                      <input
+                        type="checkbox"
+                        checked={reminderSettings.morningCheckInEnabled}
+                        onChange={(event) =>
+                          void handleReminderToggle('morningCheckInEnabled', event.target.checked)
+                        }
+                        className="h-4 w-4 accent-amber-500"
+                      />
+                      {reminderCopy.enableMorningCheckIn}
+                    </span>
+                    <span className="block text-xs text-amber-200/70">
+                      {reminderCopy.morningCheckInTime}
+                    </span>
+                    <input
+                      type="time"
+                      value={reminderSettings.morningCheckInTime}
+                      onChange={(event) =>
+                        void handleReminderTimeChange('morningCheckInTime', event.target.value)
+                      }
+                      className="tm-input h-9 text-sm"
+                    />
+                  </label>
+                  <label className="rounded border border-amber-400/15 p-3 space-y-2">
+                    <span className="flex items-center gap-2 text-sm tm-label">
+                      <input
+                        type="checkbox"
+                        checked={reminderSettings.eveningReviewEnabled}
+                        onChange={(event) =>
+                          void handleReminderToggle('eveningReviewEnabled', event.target.checked)
+                        }
+                        className="h-4 w-4 accent-amber-500"
+                      />
+                      {reminderCopy.enableEveningReview}
+                    </span>
+                    <span className="block text-xs text-amber-200/70">
+                      {reminderCopy.eveningReviewTime}
+                    </span>
+                    <input
+                      type="time"
+                      value={reminderSettings.eveningReviewTime}
+                      onChange={(event) =>
+                        void handleReminderTimeChange('eveningReviewTime', event.target.value)
+                      }
+                      className="tm-input h-9 text-sm"
+                    />
+                  </label>
+                  <label className="rounded border border-amber-400/15 p-3 space-y-2">
+                    <span className="flex items-center gap-2 text-sm tm-label">
+                      <input
+                        type="checkbox"
+                        checked={reminderSettings.overdueReminderEnabled}
+                        onChange={(event) =>
+                          void handleReminderToggle('overdueReminderEnabled', event.target.checked)
+                        }
+                        className="h-4 w-4 accent-amber-500"
+                      />
+                      {reminderCopy.enableOverdueReminder}
+                    </span>
+                    <span className="block text-xs text-amber-200/70">
+                      {reminderCopy.overdueReminderHint}
+                    </span>
+                  </label>
+                </div>
+                {notificationHelpText ? (
+                  <p className="text-xs text-amber-200/70" role="status" aria-live="polite">
+                    {notificationHelpText}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <div className="space-y-2">
             <p className="tm-label">Данные</p>
+            <p className="tm-settings-data-note max-w-2xl text-xs leading-relaxed text-amber-200/65">
+              Задачи хранятся локально в текущем браузере и адресе приложения. Разные
+              профили, localhost и 127.0.0.1 используют отдельные базы.
+            </p>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleTransferToggle}

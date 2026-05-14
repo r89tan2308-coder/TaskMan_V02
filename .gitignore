@@ -44,6 +44,8 @@ Thumbs.db
 .cache/
 .tmp/
 temp/
+.codex-snapshots/
+pet-runs/
 
 # ================================
 # Logs
