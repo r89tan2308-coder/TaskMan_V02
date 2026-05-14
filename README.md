@@ -4,6 +4,12 @@ Offline-first task manager PWA built with Vite, React, TypeScript, Dexie, Tailwi
 
 The app keeps its working data in the browser storage through IndexedDB. There is no backend or account system in the current version.
 
+## Live App
+
+- Production URL: https://dancing-licorice-4201d3.netlify.app
+- Netlify project: `dancing-licorice-4201d3`
+- Netlify site id: `9b9d3dee-0927-4d16-99f0-8060072e74a2`
+
 ## Features
 
 - Today workflow with task completion, overdue handling, XP, rewards, and task return counters.
@@ -56,7 +62,7 @@ npm run build
 
 ## Deploy
 
-Netlify is configured through `netlify.toml`:
+Netlify is configured through `netlify.toml` and deploys the Vite build output:
 
 ```toml
 [build]
