@@ -1,0 +1,11 @@
+.git/
+.github/
+.codex-snapshots/
+node_modules/
+dist/
+dev-dist/
+.vite/
+pet-runs/
+*.log
+.env
+.env.*
