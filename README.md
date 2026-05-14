@@ -1,48 +1,79 @@
-# TaskMan PWA (MVP)
+# TaskMan V02
 
-Клиентское offline‑first PWA без бэкенда и авторизации. Источник правды — локальный event ledger (Dexie/IndexedDB). Сервис‑воркер управляется Workbox через `vite-plugin-pwa`. UI — Tailwind.
+Offline-first task manager PWA built with Vite, React, TypeScript, Dexie, Tailwind CSS, and Workbox.
 
-## Стек
-- Vite + React + TypeScript
+The app keeps its working data in the browser storage through IndexedDB. There is no backend or account system in the current version.
+
+## Features
+
+- Today workflow with task completion, overdue handling, XP, rewards, and task return counters.
+- Projects, Progress, Calendar, Notes, Ledger, Daily Log, Settings, Shop, Skills, and Analytics pages.
+- Local notifications/reminders and app badge support where the browser allows it.
+- Import/export safety checks for backup restore flows.
+- Multiple visual themes, including classic, handwritten, and HUD styles.
+- Optional pet companion and experimental Tetris page behind feature flags.
+- PWA build with service worker support.
+
+## Stack
+
+- Vite
+- React 18
+- TypeScript
 - Tailwind CSS
-- Dexie (IndexedDB)
-- Workbox (через `vite-plugin-pwa`)
+- Dexie / IndexedDB
+- Workbox via `vite-plugin-pwa`
+- Vitest
 
-## Требования
-- Node.js 18+
+## Requirements
+
+- Node.js 20 or newer is recommended for Vite 7.
 - npm
 
-## Локальный запуск
+## Local Development
+
 ```bash
 npm install
 npm run dev
 ```
-Откройте адрес из консоли (`http://localhost:5173` по умолчанию).
 
-## Сборка
+The dev server normally opens at:
+
+```text
+http://localhost:5173
+```
+
+Browser storage is local to the browser profile. If you open the app in a different browser profile, it will not share the same IndexedDB/localStorage data.
+
+## Checks
+
 ```bash
+npm run typecheck
+npm run test:run
 npm run build
-npm run preview
 ```
 
-## Текущее состояние
-- Базовый скелет PWA: React + Tailwind, регистрация service worker через `virtual:pwa-register`.
-- Заготовка Dexie (`src/db/index.ts`) с таблицами tasks/ledger/rewards.
-- Манифест PWA задаётся в `vite.config.ts`.
+`npm run build` runs `typecheck` first and then builds the Vite app into `dist/`.
 
-## Структура
-```
-src/
-  App.tsx          # входной экран-заглушка
-  main.tsx         # bootstrap + SW регистрация
-  index.css        # Tailwind директивы и базовые стили
-  db/              # Dexie schema
-  pages|features|domain|services|i18n|service-worker|shared/  # зарезервировано под логику
+## Deploy
+
+Netlify is configured through `netlify.toml`:
+
+```toml
+[build]
+  command = "npm run build"
+  publish = "dist"
 ```
 
-## MVP ограничения (см. PAUSE_NOTES.md)
-- Только client-only PWA; нет backend/auth/Clerk или других онлайн‑сервисов.
-- Редкость -> XP per rarity; знак XP задаётся при логировании.
-- Стрик с кастомным периодом; можно править прошлые логи с подтверждением.
-- Один дедлайн и одно напоминание на задачу; экспорт .ics включает VALARM.
-- Импорт/экспорт JSON: `schemaVersion`, `exportedAt` (ISO), опционально `appVersion`, `source="taskman-pwa"`, режим `replace`.
+SPA fallback is enabled so app routes resolve to `index.html`.
+
+## Repository Hygiene
+
+Generated build output and local artifacts are ignored:
+
+- `node_modules/`
+- `dist/`
+- `.env*`
+- `.codex-snapshots/`
+- `pet-runs/`
+
+Keep real backup exports, test data dumps, and secrets out of the repo.
