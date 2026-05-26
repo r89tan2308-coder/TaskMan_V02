@@ -78,6 +78,47 @@ describe('planTransferService', () => {
     expect(payload.createTasks[0].value).toBe(5);
   });
 
+  it('accepts the plan export format as an import source', () => {
+    const payload = validatePlanImportPayload({
+      schemaVersion: 1,
+      exportedAt: '2026-04-24T09:00:00.000Z',
+      timezone: 'Europe/Moscow',
+      projects: [
+        {
+          id: 'project-a',
+          title: 'Alpha',
+          description: 'From export',
+          status: 'active'
+        }
+      ],
+      tasks: [
+        {
+          title: 'Task A',
+          projectId: 'project-a',
+          bucket: 'next',
+          dueDate: '2026-04-15',
+          periodicity: 'one-time',
+          rarity: 'common',
+          value: 5,
+          status: 'open'
+        }
+      ]
+    });
+
+    expect(payload.createProjects).toEqual([
+      {
+        clientId: 'project-a',
+        title: 'Alpha',
+        description: 'From export'
+      }
+    ]);
+    expect(payload.createTasks[0]).toMatchObject({
+      title: 'Task A',
+      projectRef: 'project-a',
+      bucket: 'next'
+    });
+  });
+
   it('normalizes none periodicity to one-time', () => {
     const payload = validatePlanImportPayload({
       schemaVersion: 1,

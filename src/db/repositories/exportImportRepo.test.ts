@@ -257,25 +257,42 @@ describe('exportImportRepo', () => {
     await expectInvalidImportToRejectBeforeRestore(makeBackupBundle(override));
   });
 
-  it.each([
-    ['task projectId', { tasks: [makeTask({ projectId: 'missing-project' })] }],
-    ['daily log taskId', { dailyLogs: [makeDailyLog({ taskId: 'missing-task' })] }],
-    ['ledger taskId', { ledgerEvents: [makeLedgerEvent({ taskId: 'missing-task' })] }],
-    [
-      'ledger rewardId',
-      {
+  it('rejects task projectId references before restore when the project is missing', async () => {
+    await expectInvalidImportToRejectBeforeRestore(
+      makeBackupBundle({ tasks: [makeTask({ projectId: 'missing-project' })] })
+    );
+  });
+
+  it('allows historical log and ledger references to deleted tasks or rewards', async () => {
+    await replaceAllFromImport(
+      makeBackupBundle({
+        dailyLogs: [makeDailyLog({ taskId: 'deleted-task' })],
         ledgerEvents: [
+          makeLedgerEvent({ taskId: 'deleted-task' }),
           makeLedgerEvent({
             id: 'reward-event-1',
             kind: 'reward',
             taskId: undefined,
-            rewardId: 'missing-reward',
+            rewardId: 'deleted-reward',
             deltaXp: -10
           })
         ]
-      }
-    ]
-  ])('rejects broken %s references before restore', async (_label, override) => {
-    await expectInvalidImportToRejectBeforeRestore(makeBackupBundle(override));
+      }) as never
+    );
+
+    expect(mockDb.db.transaction).toHaveBeenCalledTimes(1);
+    expect(mockDb.db.dailyLogs.bulkAdd).toHaveBeenCalledWith([
+      makeDailyLog({ taskId: 'deleted-task' })
+    ]);
+    expect(mockDb.db.ledgerEvents.bulkAdd).toHaveBeenCalledWith([
+      makeLedgerEvent({ taskId: 'deleted-task' }),
+      makeLedgerEvent({
+        id: 'reward-event-1',
+        kind: 'reward',
+        taskId: undefined,
+        rewardId: 'deleted-reward',
+        deltaXp: -10
+      })
+    ]);
   });
 });

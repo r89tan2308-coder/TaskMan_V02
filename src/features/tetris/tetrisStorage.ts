@@ -59,6 +59,11 @@ export async function saveTetrisRecord(record: TetrisRecord) {
   return next;
 }
 
+export async function clearTetrisRecords() {
+  await setAppMetaValue(TETRIS_RECORDS_META_KEY, []);
+  return [] as TetrisRecord[];
+}
+
 export async function loadTetrisSkin() {
   const raw = await getAppMetaValue<unknown>(TETRIS_SKIN_META_KEY);
   return TETRIS_SKIN_IDS.includes(raw as TetrisSkinId) ? (raw as TetrisSkinId) : 'cat';

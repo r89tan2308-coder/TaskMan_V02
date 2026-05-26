@@ -503,7 +503,7 @@ export function NotesPage() {
                   >
                     <div className="flex items-start gap-3">
                       <div
-                        className={`tm-drag-handle min-w-0 ${
+                        className={`tm-drag-handle min-w-0 flex-1 ${
                           dragEnabled ? '' : 'tm-drag-disabled'
                         }`}
                         draggable={dragEnabled}
@@ -514,6 +514,9 @@ export function NotesPage() {
                         tabIndex={0}
                         aria-expanded={isExpanded}
                         aria-controls={`note-body-${note.id}`}
+                        aria-label={`${isExpanded ? 'Свернуть' : 'Открыть'} заметку ${
+                          note.title || 'Без названия'
+                        }`}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
@@ -522,7 +525,7 @@ export function NotesPage() {
                         }}
                         title={dragEnabled ? 'Drag to reorder' : undefined}
                       >
-                        <p className="text-amber-50 font-semibold break-words">
+                        <p className="tm-note-title break-words">
                           {note.title || 'Без названия'}
                         </p>
                         <p className="text-sm text-amber-200/80 break-words">
@@ -532,7 +535,6 @@ export function NotesPage() {
                           <span className={rarityStyle.text}>{note.rarity}</span>
                         </p>
                       </div>
-                      <span className="tm-pill">{isExpanded ? 'Свернуть' : 'Открыть'}</span>
                     </div>
                     <div
                       id={`note-body-${note.id}`}

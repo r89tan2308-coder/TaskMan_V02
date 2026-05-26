@@ -540,6 +540,47 @@ function RewardProgressBar({ value }: { value: number }) {
   );
 }
 
+function TodayDayProgressBar({
+  completed,
+  total,
+  remaining,
+  overdue
+}: {
+  completed: number;
+  total: number;
+  remaining: number;
+  overdue: number;
+}) {
+  const progressPercent = total > 0 ? clampPercent((completed / total) * 100) : 0;
+  const progressLabel = total > 0 ? `${completed} из ${total}` : 'Старт';
+  const progressCaption =
+    total > 0
+      ? `Осталось ${Math.max(remaining, 0)}${overdue > 0 ? ` · просрочено ${overdue}` : ''}`
+      : 'План на день появится после добавления задач';
+
+  return (
+    <div
+      className={`tm-today-day-progress ${
+        total > 0 && completed >= total ? 'tm-today-day-progress-complete' : ''
+      } ${overdue > 0 ? 'tm-today-day-progress-has-overdue' : ''}`}
+    >
+      <div
+        className="tm-progress w-full"
+        role="progressbar"
+        aria-label="Прогресс дня"
+        aria-valuenow={Math.round(progressPercent)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={progressLabel}
+      >
+        <div className="tm-progress-fill" style={{ width: `${progressPercent}%` }} />
+        <span className="tm-progress-value">{progressLabel}</span>
+      </div>
+      <p className="tm-today-day-progress-caption">{progressCaption}</p>
+    </div>
+  );
+}
+
 function TaskProgressControls({
   value,
   onChange,
@@ -1143,7 +1184,7 @@ function TaskCard({
               disabled={busy}
             />
           ) : null}
-          <div>
+          <div className={hasComment ? 'tm-task-comment-panel' : undefined}>
             <p className="tm-task-details-title">Комментарий</p>
             <p className="tm-task-details-text whitespace-pre-wrap">{commentText}</p>
           </div>
@@ -1361,7 +1402,7 @@ function OverdueTaskCard({
               disabled={busy}
             />
           ) : null}
-          <div>
+          <div className={hasComment ? 'tm-task-comment-panel' : undefined}>
             <p className="tm-task-details-title">Комментарий</p>
             <p className="tm-task-details-text whitespace-pre-wrap">{commentText}</p>
           </div>
@@ -2233,7 +2274,7 @@ function ExecutionTaskCard({
             />
           ) : null}
           {commentValue ? (
-            <div>
+            <div className="tm-task-comment-panel">
               <p className="tm-task-details-title">Комментарий</p>
               <p className="tm-task-details-text whitespace-pre-wrap">{commentValue}</p>
             </div>
@@ -2821,6 +2862,7 @@ export function TodayPage() {
   const dailyTaskStreakById = useMemo(() => {
     const result = new Map<string, StreakState>();
     const eventsByTaskId = new Map<string, LedgerEvent[]>();
+    const referenceDate = new Date();
 
     for (const event of ledgerEvents) {
       if (event.kind !== 'task' || !event.taskId) continue;
@@ -2834,7 +2876,10 @@ export function TodayPage() {
 
     for (const task of tasks) {
       if (task.periodicity !== 'daily') continue;
-      result.set(task.id, computeTaskDailyStreak(eventsByTaskId.get(task.id) ?? [], task.id));
+      result.set(
+        task.id,
+        computeTaskDailyStreak(eventsByTaskId.get(task.id) ?? [], task.id, referenceDate)
+      );
     }
 
     return result;
@@ -3448,14 +3493,14 @@ export function TodayPage() {
         <div className="tm-today-summary-header">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold tm-title">Как идёт день</h2>
-            <p className="tm-today-day-subline">
-              Доступно {statsXpBalance} XP · {formatXpDelta(dailyXp)} сегодня
-            </p>
           </div>
-          <p className="tm-today-day-kicker">
-            {todayLoopTotalCount > 0 ? `${completedTodayCount} из ${todayLoopTotalCount}` : 'Старт'}
-          </p>
         </div>
+        <TodayDayProgressBar
+          completed={completedTodayCount}
+          total={todayLoopTotalCount}
+          remaining={statsRemainingCount}
+          overdue={statsOverdueCount}
+        />
         <div className="tm-today-mini-metrics">
           <div className="tm-today-mini-metric tm-today-mini-metric-done">
             <p className="tm-today-mini-label">Сделано</p>
@@ -3638,8 +3683,6 @@ export function TodayPage() {
                       />
                     ) : null}
 
-                    {completedTodaySection}
-
                     <section className="tm-panel p-4 space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -3676,6 +3719,8 @@ export function TodayPage() {
                         Открыть Next
                       </button>
                     </section>
+
+                    {completedTodaySection}
                   </>
                 )}
               </section>

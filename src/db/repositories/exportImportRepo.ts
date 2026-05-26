@@ -315,27 +315,10 @@ const validateAppMeta = (value: unknown): Record<string, unknown> => {
 
 const validateCrossTableReferences = (data: ExportBundleData) => {
   const projectIds = new Set(data.projects.map((project) => project.id));
-  const taskIds = new Set(data.tasks.map((task) => task.id));
-  const rewardIds = new Set(data.rewards.map((reward) => reward.id));
 
   for (const task of data.tasks) {
     if (task.projectId && !projectIds.has(task.projectId)) {
       fail(`tasks contains projectId "${task.projectId}" that is not present in projects.`);
-    }
-  }
-
-  for (const entry of data.dailyLogs) {
-    if (!taskIds.has(entry.taskId)) {
-      fail(`dailyLogs contains taskId "${entry.taskId}" that is not present in tasks.`);
-    }
-  }
-
-  for (const event of data.ledgerEvents) {
-    if (event.taskId && !taskIds.has(event.taskId)) {
-      fail(`ledgerEvents contains taskId "${event.taskId}" that is not present in tasks.`);
-    }
-    if (event.rewardId && !rewardIds.has(event.rewardId)) {
-      fail(`ledgerEvents contains rewardId "${event.rewardId}" that is not present in rewards.`);
     }
   }
 };

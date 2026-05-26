@@ -1,8 +1,15 @@
+import {
+  BACKUP_GUIDE_ITEMS,
+  PLAN_IMPORT_GUIDE_ITEMS,
+  TASKMAN_PLAN_PROMPT
+} from '../content/importExportGuide';
+
 type ManualSection = {
   id: string;
   title: string;
   summary: string;
   items: string[];
+  prompt?: string;
 };
 
 const MANUAL_SECTIONS: ManualSection[] = [
@@ -105,6 +112,17 @@ const MANUAL_SECTIONS: ManualSection[] = [
     ]
   },
   {
+    id: 'transfer',
+    title: 'Импорт, план и backup',
+    summary: 'Два разных сценария переноса данных: planning JSON добавляет новые задачи, backup полностью восстанавливает локальную базу.',
+    items: [
+      ...PLAN_IMPORT_GUIDE_ITEMS,
+      ...BACKUP_GUIDE_ITEMS,
+      'Файлы привязаны к текущему браузеру и origin приложения. Для переноса между localhost:5173 и localhost:5174 сначала сделайте backup на старом адресе, затем восстановите его на новом.'
+    ],
+    prompt: TASKMAN_PLAN_PROMPT
+  },
+  {
     id: 'settings',
     title: 'Settings',
     summary: 'Настройки интерфейса, данных и служебных действий.',
@@ -113,10 +131,8 @@ const MANUAL_SECTIONS: ManualSection[] = [
       'Для рукописной темы можно загрузить собственный фон и удалить его.',
       'В разделе XP можно вручную отредактировать текущий баланс.',
       'Кнопка обновления приложения проверяет наличие новой версии.',
-      'В разделе Планирование кнопка Export выгружает active projects и open tasks в planning JSON для внешнего чата или наставника.',
-      'Кнопка Import загружает plan-import.json через безопасный preview: файл валидируется, показывается список проектов и задач, после чего можно выборочно снять лишнее и импортировать только отмеченное.',
-      'Planning Import создаёт только новые проекты и задачи. Он не заменяет backup restore и не редактирует историю, награды, completed data или настройки.',
-      'В разделе Резервная копия находятся отдельные действия для полного backup JSON и полного восстановления локальной базы с заменой данных.'
+      'В разделе Данные находится блок Импорт / экспорт: там есть planning Export / Import, backup download / restore и краткий встроенный мануал под кнопкой Как пользоваться.',
+      'Planning Import создаёт только новые проекты и задачи через preview. Backup restore полностью заменяет локальную базу.'
     ]
   }
 ];
@@ -170,6 +186,12 @@ export function ManualPage({ onBack }: { onBack: () => void }) {
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
+                {section.prompt ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold tm-title">Промпт для нейронки</p>
+                    <pre className="tm-transfer-prompt whitespace-pre-wrap text-xs leading-5"><code>{section.prompt}</code></pre>
+                  </div>
+                ) : null}
               </section>
             ))}
           </div>

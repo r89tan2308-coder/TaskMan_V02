@@ -773,6 +773,7 @@
 
 .tm-app.tm-theme-hud .tm-today-mini-label,
 .tm-app.tm-theme-hud .tm-today-day-subline,
+.tm-app.tm-theme-hud .tm-today-day-progress-caption,
 .tm-app.tm-theme-hud .tm-today-secondary-line,
 .tm-app.tm-theme-hud .tm-today-reward-remaining,
 .tm-app.tm-theme-hud .tm-today-reward-subline,
@@ -783,6 +784,34 @@
 .tm-app.tm-theme-hud .tm-today-mini-value,
 .tm-app.tm-theme-hud .tm-today-reward-progress-value {
   color: var(--tm-text);
+}
+
+.tm-app.tm-theme-hud .tm-today-day-progress .tm-progress {
+  border-color: rgba(125, 232, 255, 0.52);
+  background:
+    linear-gradient(180deg, rgba(205, 248, 255, 0.12), rgba(5, 12, 18, 0.78)),
+    rgba(7, 13, 18, 0.82);
+  box-shadow:
+    inset 0 1px 0 rgba(205, 248, 255, 0.16),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.64),
+    0 0 0 1px rgba(114, 230, 255, 0.08),
+    0 0 20px rgba(83, 219, 255, 0.16);
+}
+
+.tm-app.tm-theme-hud .tm-today-day-progress .tm-progress-fill {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0)),
+    linear-gradient(90deg, var(--tm-hud-cyan-bright), var(--tm-hud-cyan));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0 20px rgba(114, 230, 255, 0.34);
+}
+
+.tm-app.tm-theme-hud .tm-today-day-progress .tm-progress-value {
+  border-color: rgba(199, 247, 255, 0.34);
+  background: rgba(4, 10, 14, 0.72);
+  color: #eefdff;
+  text-shadow: 0 0 8px rgba(114, 230, 255, 0.28);
 }
 
 .tm-app.tm-theme-hud .tm-summary-icon-button {

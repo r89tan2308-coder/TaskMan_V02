@@ -53,6 +53,41 @@ const normalizePlanPeriodicity = (value: unknown): Periodicity | null => {
 const isAllowedRarity = (value: unknown): value is Rarity =>
   typeof value === 'string' && ALLOWED_RARITIES.includes(value as Rarity);
 
+const normalizePlanPayloadShape = (payload: Record<string, unknown>) => {
+  if (Array.isArray(payload.createProjects) && Array.isArray(payload.createTasks)) {
+    return payload;
+  }
+
+  if (!Array.isArray(payload.projects) || !Array.isArray(payload.tasks)) {
+    return payload;
+  }
+
+  return {
+    schemaVersion: payload.schemaVersion,
+    createProjects: payload.projects.map((entry) => {
+      if (!isRecord(entry)) return entry;
+      return {
+        clientId: entry.clientId ?? entry.id,
+        title: entry.title,
+        description: entry.description
+      };
+    }),
+    createTasks: payload.tasks.map((entry) => {
+      if (!isRecord(entry)) return entry;
+      return {
+        title: entry.title,
+        projectRef: entry.projectRef ?? entry.projectId ?? null,
+        bucket: entry.bucket,
+        dueDate: entry.dueDate ?? null,
+        periodicity: entry.periodicity,
+        note: entry.note,
+        rarity: entry.rarity,
+        value: entry.value
+      };
+    })
+  };
+};
+
 const isValidPlanDatePart = (year: number, month: number, day: number) => {
   const date = new Date(year, month - 1, day, 0, 0, 0, 0);
   return (
@@ -215,18 +250,19 @@ export function validatePlanImportPayload(payload: unknown): PlanImportPayload {
   if (!isRecord(payload)) {
     throw new Error(INVALID_PLAN_FORMAT_MESSAGE);
   }
-  if (payload.schemaVersion !== 1) {
+  const normalizedPayload = normalizePlanPayloadShape(payload);
+  if (normalizedPayload.schemaVersion !== 1) {
     throw new Error('Некорректный schemaVersion в файле плана.');
   }
-  if (!Array.isArray(payload.createProjects)) {
+  if (!Array.isArray(normalizedPayload.createProjects)) {
     throw new Error('Некорректный файл плана: createProjects должен быть массивом.');
   }
-  if (!Array.isArray(payload.createTasks)) {
+  if (!Array.isArray(normalizedPayload.createTasks)) {
     throw new Error('Некорректный файл плана: createTasks должен быть массивом.');
   }
 
   const clientIds = new Set<string>();
-  const createProjects = payload.createProjects.map((entry, index) => {
+  const createProjects = normalizedPayload.createProjects.map((entry, index) => {
     if (!isRecord(entry)) {
       throw new Error(`Некорректный createProjects[${index}].`);
     }
@@ -249,7 +285,7 @@ export function validatePlanImportPayload(payload: unknown): PlanImportPayload {
     return { clientId, title, description };
   });
 
-  const createTasks = payload.createTasks.map((entry, index) => {
+  const createTasks = normalizedPayload.createTasks.map((entry, index) => {
     if (!isRecord(entry)) {
       throw new Error(`Некорректный createTasks[${index}].`);
     }

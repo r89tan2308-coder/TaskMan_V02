@@ -13,6 +13,11 @@ import {
   buildPlanExportPayload,
   preparePlanImportPreview
 } from '../services/planTransferService';
+import {
+  BACKUP_GUIDE_ITEMS,
+  PLAN_IMPORT_GUIDE_ITEMS,
+  TASKMAN_PLAN_PROMPT
+} from '../content/importExportGuide';
 import { reminderCopy } from '../i18n/reminders';
 import { getXpBalance } from '../services/xpService';
 import {
@@ -65,6 +70,13 @@ const getPlanImportErrorText = (error: unknown) => {
   return error instanceof Error ? error.message : 'Не удалось загрузить план.';
 };
 
+const getBackupImportErrorText = (error: unknown) => {
+  if (error instanceof SyntaxError) {
+    return 'Файл backup повреждён или имеет неверный JSON-формат.';
+  }
+  return error instanceof Error ? error.message : 'Не удалось импортировать backup.';
+};
+
 const getPlanPreviewNote = (value?: string, maxLength = 120) => {
   const trimmed = value?.trim();
   if (!trimmed) return null;
@@ -111,6 +123,7 @@ export function SettingsPage({
   >('idle');
   const [interfaceOpen, setInterfaceOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [transferGuideOpen, setTransferGuideOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [xp, setXp] = useState(0);
   const [editingXp, setEditingXp] = useState(false);
@@ -237,7 +250,7 @@ export function SettingsPage({
         await replaceAllFromImport(payload);
         window.location.reload();
       } catch (error) {
-        await showAppAlert('Не удалось импортировать backup.');
+        await showAppAlert(getBackupImportErrorText(error));
       } finally {
         event.target.value = '';
       }
@@ -387,6 +400,10 @@ export function SettingsPage({
 
   const handleTransferToggle = () => {
     setTransferOpen((prev) => !prev);
+  };
+
+  const handleTransferGuideToggle = () => {
+    setTransferGuideOpen((prev) => !prev);
   };
 
   const handleNotificationsToggle = () => {
@@ -915,6 +932,50 @@ export function SettingsPage({
             </div>
             {transferOpen ? (
               <div className="tm-panel-soft p-3 space-y-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm text-amber-100">Перенос и планирование</p>
+                    <p className="text-xs text-amber-200/70">
+                      Planning JSON для новых задач, backup JSON для полной копии базы.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTransferGuideToggle}
+                    className="tm-button tm-button-steel"
+                    aria-expanded={transferGuideOpen}
+                  >
+                    Как пользоваться
+                  </button>
+                </div>
+
+                {transferGuideOpen ? (
+                  <div className="tm-transfer-guide space-y-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold tm-title">План для нейронки</p>
+                        <ul className="space-y-1.5 text-xs leading-5 text-amber-100/85 pl-4 list-disc">
+                          {PLAN_IMPORT_GUIDE_ITEMS.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold tm-title">Backup</p>
+                        <ul className="space-y-1.5 text-xs leading-5 text-amber-100/85 pl-4 list-disc">
+                          {BACKUP_GUIDE_ITEMS.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold tm-title">Промпт для нейронки</p>
+                      <pre className="tm-transfer-prompt whitespace-pre-wrap text-xs leading-5"><code>{TASKMAN_PLAN_PROMPT}</code></pre>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="space-y-3">
                   <div className="min-w-0">
                     <p className="text-sm text-amber-100">Планирование</p>
@@ -922,35 +983,39 @@ export function SettingsPage({
                       Экспортирует план наружу и импортирует новые задачи и проекты обратно.
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="tm-transfer-action-row">
                     <div className="min-w-0">
                       <p className="text-sm text-amber-100">Выгрузить план</p>
                       <p className="text-xs text-amber-200/70">
                         Экспортирует задачи и проекты для внешнего планирования
                       </p>
                     </div>
-                    <button
-                      onClick={handlePlanExport}
-                      disabled={planExporting}
-                      className="tm-button tm-button-gold"
-                    >
-                      {planExporting ? 'Export...' : 'Export'}
-                    </button>
+                    <div className="tm-transfer-actions">
+                      <button
+                        onClick={handlePlanExport}
+                        disabled={planExporting}
+                        className="tm-button tm-button-gold"
+                      >
+                        {planExporting ? 'Export...' : 'Export'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="tm-transfer-action-row">
                     <div className="min-w-0">
                       <p className="text-sm text-amber-100">Загрузить план</p>
                       <p className="text-xs text-amber-200/70">
                         Импортирует новые задачи и проекты из плана
                       </p>
                     </div>
-                    <button
-                      onClick={handlePlanImportClick}
-                      disabled={planImporting}
-                      className="tm-button tm-button-primary"
-                    >
-                      {planImporting ? 'Import...' : 'Import'}
-                    </button>
+                    <div className="tm-transfer-actions">
+                      <button
+                        onClick={handlePlanImportClick}
+                        disabled={planImporting}
+                        className="tm-button tm-button-primary"
+                      >
+                        {planImporting ? 'Import...' : 'Import'}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="border-t border-amber-400/15 pt-4 space-y-3">
@@ -960,20 +1025,38 @@ export function SettingsPage({
                       Полный экспорт и восстановление приложения. Импорт полностью заменяет локальные данные.
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      onClick={handleExport}
-                      disabled={exporting}
-                      className="tm-button tm-button-gold"
-                    >
-                      {exporting ? 'Экспорт...' : 'Скачать backup'}
-                    </button>
-                    <button
-                      onClick={handleImportClick}
-                      className="tm-button tm-button-primary"
-                    >
-                      Восстановить backup
-                    </button>
+                  <div className="tm-transfer-action-row">
+                    <div className="min-w-0">
+                      <p className="text-sm text-amber-100">Скачать backup</p>
+                      <p className="text-xs text-amber-200/70">
+                        Сохраняет полную копию локальных данных в JSON
+                      </p>
+                    </div>
+                    <div className="tm-transfer-actions">
+                      <button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="tm-button tm-button-gold"
+                      >
+                        {exporting ? 'Экспорт...' : 'Скачать backup'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="tm-transfer-action-row">
+                    <div className="min-w-0">
+                      <p className="text-sm text-amber-100">Восстановить backup</p>
+                      <p className="text-xs text-amber-200/70">
+                        Полностью заменяет текущую локальную базу выбранным backup
+                      </p>
+                    </div>
+                    <div className="tm-transfer-actions">
+                      <button
+                        onClick={handleImportClick}
+                        className="tm-button tm-button-primary"
+                      >
+                        Восстановить backup
+                      </button>
+                    </div>
                   </div>
                 </div>
                 {planStatus ? (

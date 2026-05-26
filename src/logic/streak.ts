@@ -3,6 +3,8 @@ import { StreakPeriod, StreakRule, StreakState } from '../entities/streak/types'
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+type PeriodKeyInfo = { key: string; order: number };
+
 function startOfDayLocal(date: Date): number {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }
@@ -48,8 +50,23 @@ function customKey(date: Date, period: StreakPeriod): { key: string; order: numb
   return { key: `custom-${order}`, order };
 }
 
+function periodKey(date: Date, period: StreakPeriod): PeriodKeyInfo {
+  if (period.kind === 'daily') return dailyKey(date);
+  if (period.kind === 'weekly') return weeklyKey(date);
+  return customKey(date, period);
+}
+
+function parseEventTimestamp(value: unknown): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : NaN;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value !== 'string') return NaN;
+  const parsed = Date.parse(value);
+  if (!Number.isNaN(parsed)) return parsed;
+  const numericFallback = Number(value);
+  return Number.isFinite(numericFallback) ? numericFallback : NaN;
+}
+
 function taskEventIsDone(event: LedgerEvent): boolean {
-  if (event.note === 'TASK_DONE' || event.meta?.eventType === 'TASK_DONE') return true;
   if (
     event.note === 'TASK_MISSED' ||
     event.meta?.eventType === 'TASK_MISSED' ||
@@ -59,13 +76,38 @@ function taskEventIsDone(event: LedgerEvent): boolean {
   ) {
     return false;
   }
+  if (event.note === 'TASK_DONE' || event.meta?.eventType === 'TASK_DONE') return true;
   return event.deltaXp > 0;
+}
+
+function countCurrentQualifiedPeriods(
+  entriesByOrder: Map<number, { count: number }>,
+  referenceOrder: number,
+  stepMs: number,
+  required: number
+) {
+  let cursorOrder = referenceOrder;
+  const referenceEntry = entriesByOrder.get(referenceOrder);
+  if (!referenceEntry || referenceEntry.count < required) {
+    cursorOrder -= stepMs;
+  }
+
+  let currentCount = 0;
+  while (true) {
+    const entry = entriesByOrder.get(cursorOrder);
+    if (!entry || entry.count < required) break;
+    currentCount += 1;
+    cursorOrder -= stepMs;
+  }
+
+  return currentCount;
 }
 
 export function computeStreak(
   events: LedgerEvent[],
   period: StreakPeriod,
-  rule: StreakRule
+  rule: StreakRule,
+  referenceDate = new Date()
 ): StreakState {
   // Streak считается только по task-событиям (логирование задач), не по наградам/импорту.
   const taskEvents = events.filter((e) => e.kind === 'task');
@@ -79,46 +121,71 @@ export function computeStreak(
     };
   }
 
-  const counts = new Map<string, { count: number; order: number }>();
-  let lastEventAt = '';
+  const latestByPeriodTask = new Map<
+    string,
+    {
+      periodKey: string;
+      order: number;
+      timestamp: number;
+      completed: boolean;
+      createdAt: string;
+    }
+  >();
   const stepMs = periodStepMs(period);
 
   for (const event of taskEvents) {
-    const ts = new Date(event.createdAt).getTime();
+    if (!event.taskId) continue;
+    const ts = parseEventTimestamp(event.createdAt);
     if (Number.isNaN(ts)) continue;
-    if (!lastEventAt || ts > new Date(lastEventAt).getTime()) {
-      lastEventAt = event.createdAt;
-    }
     const date = new Date(ts);
-    let keyInfo: { key: string; order: number };
-    if (period.kind === 'daily') {
-      keyInfo = dailyKey(date);
-    } else if (period.kind === 'weekly') {
-      keyInfo = weeklyKey(date);
-    } else {
-      keyInfo = customKey(date, period);
+    const keyInfo = periodKey(date, period);
+    const latestKey = `${keyInfo.key}:${event.taskId}`;
+    const existing = latestByPeriodTask.get(latestKey);
+    if (!existing || ts > existing.timestamp) {
+      latestByPeriodTask.set(latestKey, {
+        periodKey: keyInfo.key,
+        order: keyInfo.order,
+        timestamp: ts,
+        completed: taskEventIsDone(event),
+        createdAt: event.createdAt
+      });
     }
-    const existing = counts.get(keyInfo.key);
-    const count = (existing?.count ?? 0) + 1;
-    counts.set(keyInfo.key, { count, order: keyInfo.order });
+  }
+
+  const counts = new Map<string, { count: number; order: number }>();
+  let lastCompletedAt = '';
+  let lastCompletedTimestamp = NaN;
+
+  for (const entry of latestByPeriodTask.values()) {
+    if (!entry.completed) continue;
+    const existing = counts.get(entry.periodKey);
+    counts.set(entry.periodKey, {
+      count: (existing?.count ?? 0) + 1,
+      order: entry.order
+    });
+
+    if (
+      !lastCompletedAt ||
+      Number.isNaN(lastCompletedTimestamp) ||
+      entry.timestamp > lastCompletedTimestamp
+    ) {
+      lastCompletedAt = entry.createdAt;
+      lastCompletedTimestamp = entry.timestamp;
+    }
   }
 
   const entries = Array.from(counts.entries()).map(([key, value]) => ({ key, ...value }));
   entries.sort((a, b) => b.order - a.order);
 
-  let currentCount = 0;
   const required = rule.requiredCountPerPeriod;
-  if (entries.length) {
-    let cursorOrder = entries[0].order;
-    for (const entry of entries) {
-      if (entry.order === cursorOrder && entry.count >= required) {
-        currentCount += 1;
-        cursorOrder -= stepMs;
-      } else {
-        break;
-      }
-    }
-  }
+  const entriesByOrder = new Map(entries.map((entry) => [entry.order, entry]));
+  const referenceOrder = periodKey(referenceDate, period).order;
+  const currentCount = countCurrentQualifiedPeriods(
+    entriesByOrder,
+    referenceOrder,
+    stepMs,
+    required
+  );
 
   let bestCount = 0;
   for (let i = 0; i < entries.length; i++) {
@@ -142,11 +209,15 @@ export function computeStreak(
     bestCount,
     period,
     rule,
-    lastEventAt: lastEventAt || undefined
+    lastEventAt: lastCompletedAt || undefined
   };
 }
 
-export function computeTaskDailyStreak(events: LedgerEvent[], taskId: string): StreakState {
+export function computeTaskDailyStreak(
+  events: LedgerEvent[],
+  taskId: string,
+  referenceDate = new Date()
+): StreakState {
   const period: StreakPeriod = { kind: 'daily' };
   const rule: StreakRule = { requiredCountPerPeriod: 1 };
   const taskEvents = events.filter((event) => event.kind === 'task' && event.taskId === taskId);
@@ -164,10 +235,9 @@ export function computeTaskDailyStreak(events: LedgerEvent[], taskId: string): S
     string,
     { order: number; timestamp: number; completed: boolean; createdAt: string }
   >();
-  let lastCompletedAt = '';
 
   for (const event of taskEvents) {
-    const timestamp = new Date(event.createdAt).getTime();
+    const timestamp = parseEventTimestamp(event.createdAt);
     if (Number.isNaN(timestamp)) continue;
     const date = new Date(timestamp);
     const dayInfo = dailyKey(date);
@@ -183,34 +253,52 @@ export function computeTaskDailyStreak(events: LedgerEvent[], taskId: string): S
       });
     }
 
-    if (completed && (!lastCompletedAt || timestamp > new Date(lastCompletedAt).getTime())) {
-      lastCompletedAt = event.createdAt;
+  }
+
+  let lastCompletedAt = '';
+  let lastCompletedTimestamp = NaN;
+  for (const entry of latestByDay.values()) {
+    if (!entry.completed) continue;
+    if (
+      !lastCompletedAt ||
+      Number.isNaN(lastCompletedTimestamp) ||
+      entry.timestamp > lastCompletedTimestamp
+    ) {
+      lastCompletedAt = entry.createdAt;
+      lastCompletedTimestamp = entry.timestamp;
     }
   }
 
   const entries = Array.from(latestByDay.values()).sort((left, right) => right.order - left.order);
-  const stepMs = DAY_MS;
+  const entriesByOrder = new Map(entries.map((entry) => [entry.order, entry]));
+  const referenceOrder = dailyKey(referenceDate).order;
   let currentCount = 0;
+  let expectedOrder = referenceOrder;
+  const referenceEntry = entriesByOrder.get(referenceOrder);
 
-  if (entries.length > 0 && entries[0].completed) {
-    let expectedOrder = entries[0].order;
-    for (const entry of entries) {
-      if (entry.order !== expectedOrder || !entry.completed) break;
-      currentCount += 1;
-      expectedOrder -= stepMs;
-    }
+  if (!referenceEntry) {
+    expectedOrder -= DAY_MS;
+  } else if (!referenceEntry.completed) {
+    expectedOrder = NaN;
+  }
+
+  while (Number.isFinite(expectedOrder)) {
+    const entry = entriesByOrder.get(expectedOrder);
+    if (!entry || !entry.completed) break;
+    currentCount += 1;
+    expectedOrder -= DAY_MS;
   }
 
   let bestCount = 0;
   for (let index = 0; index < entries.length; index += 1) {
     if (!entries[index].completed) continue;
     let length = 1;
-    let expectedOrder = entries[index].order - stepMs;
+    let expectedOrder = entries[index].order - DAY_MS;
     for (let innerIndex = index + 1; innerIndex < entries.length; innerIndex += 1) {
       const entry = entries[innerIndex];
       if (entry.order !== expectedOrder || !entry.completed) break;
       length += 1;
-      expectedOrder -= stepMs;
+      expectedOrder -= DAY_MS;
     }
     if (length > bestCount) bestCount = length;
   }

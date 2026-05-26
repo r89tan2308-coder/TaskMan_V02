@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
 import { emitPetEvent } from '../pet/petEvents';
 import './tetris.css';
 import {
@@ -17,6 +18,7 @@ import {
   type TetrominoType
 } from './tetrisEngine';
 import {
+  clearTetrisRecords,
   loadTetrisRecords,
   loadTetrisSkin,
   saveTetrisRecord,
@@ -306,6 +308,23 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
     void saveTetrisSkin(nextSkin);
   };
 
+  const handleClearRecords = async () => {
+    if (records.length === 0) return;
+    const confirmed = await showAppConfirm({
+      message: 'Стереть все рекорды Tetris? Это действие нельзя отменить.',
+      confirmLabel: 'Стереть',
+      tone: 'danger'
+    });
+    if (!confirmed) return;
+
+    try {
+      const nextRecords = await clearTetrisRecords();
+      setRecords(nextRecords);
+    } catch (error) {
+      await showAppAlert('Не удалось стереть рекорды Tetris.');
+    }
+  };
+
   const visibleBoard = game ? getVisibleBoard(game) : createEmptyBoard();
   const nextPiece = game ? getNextPieceType(game) : null;
   const previewBoard = createPreviewBoard(nextPiece);
@@ -491,10 +510,22 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
 
               <section className="tm-panel p-3 sm:p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em] m-0">
-                    Рекорды
-                  </p>
-                  <span className="text-xs text-amber-200/65">Автосохранение</span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em] m-0">
+                      Рекорды
+                    </p>
+                    <span className="text-xs text-amber-200/65">Автосохранение</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleClearRecords();
+                    }}
+                    className="tm-button tm-button-danger tm-button-sm"
+                    disabled={records.length === 0}
+                  >
+                    Стереть
+                  </button>
                 </div>
                 {records.length > 0 ? (
                   <div className="space-y-2">

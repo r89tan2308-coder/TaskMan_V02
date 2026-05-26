@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import { TaskEditorModal } from '../components/TaskEditorModal';
+import { showAppAlert } from '../components/AppDialog';
 import { listEvents } from '../db/repositories/ledgerRepo';
 import { Project, ProjectStatus } from '../entities/project/types';
 import { Periodicity, Rarity, Task, TaskBucket } from '../entities/task/types';
@@ -18,7 +19,8 @@ import { ProjectCompletionBonusAward } from '../services/taskEventService';
 import {
   completeTask,
   listTasks,
-  undoComplete
+  undoComplete,
+  updateTask
 } from '../services/tasksService';
 
 const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
@@ -56,6 +58,9 @@ const formatDeadline = (value?: string) => {
 
 const getTaskValue = (task: Task) =>
   typeof task.xpOverride === 'number' ? task.xpOverride : xpForTask(task);
+
+const getTaskSortValue = (task: Task) =>
+  typeof task.sortOrder === 'number' ? task.sortOrder : Date.parse(task.createdAt ?? '') || 0;
 
 const getDisplayProjectStatus = (
   project: Project,
@@ -244,34 +249,65 @@ function ProjectTaskRow({
   status,
   onComplete,
   onUndo,
-  onEdit
+  onEdit,
+  dragEnabled = false,
+  showDragGrip = false,
+  dragging = false,
+  dragOver = false,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd
 }: {
   task: Task;
   status: TaskStatus;
   onComplete: (task: Task) => void;
   onUndo: (task: Task) => void;
   onEdit: (task: Task) => void;
+  dragEnabled?: boolean;
+  showDragGrip?: boolean;
+  dragging?: boolean;
+  dragOver?: boolean;
+  onDragStart?: (event: DragEvent<HTMLDivElement>, taskId: string) => void;
+  onDragOver?: (event: DragEvent<HTMLDivElement>, taskId: string) => void;
+  onDrop?: (event: DragEvent<HTMLDivElement>, taskId: string) => void;
+  onDragEnd?: () => void;
 }) {
   const deadlineLabel = formatDeadline(task.deadline);
   const taskValue = getTaskValue(task);
   const showUndo = status === 'completed';
 
   return (
-    <div className="tm-card tm-project-task-row px-3 py-3 space-y-3">
+    <div
+      className={`tm-card tm-project-task-row px-3 py-3 space-y-3 ${
+        dragging ? 'tm-dragging' : ''
+      } ${dragOver ? 'tm-drag-over' : ''}`}
+      onDragOver={(event) => onDragOver?.(event, task.id)}
+      onDrop={(event) => onDrop?.(event, task.id)}
+    >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="tm-task-title whitespace-normal break-words">{task.title}</h3>
-            {status === 'overdue' ? <span className="tm-badge tm-badge-danger">Просрочено</span> : null}
-            {status === 'missed' ? <span className="tm-badge tm-badge-danger">Пропущено</span> : null}
+        <div
+          className={`tm-project-task-main ${dragEnabled ? 'tm-project-task-main-draggable' : ''}`}
+          draggable={dragEnabled}
+          onDragStart={(event) => onDragStart?.(event, task.id)}
+          onDragEnd={onDragEnd}
+          title={dragEnabled ? 'Перетащить, чтобы изменить порядок' : undefined}
+        >
+          {showDragGrip ? <span className="tm-project-task-grip" aria-hidden="true">↕</span> : null}
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="tm-task-title whitespace-normal break-words">{task.title}</h3>
+              {status === 'overdue' ? <span className="tm-badge tm-badge-danger">Просрочено</span> : null}
+              {status === 'missed' ? <span className="tm-badge tm-badge-danger">Пропущено</span> : null}
+            </div>
+            <p className="text-sm text-amber-200/80">
+              {QUEUE_LABELS[task.bucket]} · {PERIODICITY_LABELS[task.periodicity]} · Ценность {taskValue}
+            </p>
+            {deadlineLabel ? <p className="text-xs text-amber-200/70">Дедлайн {deadlineLabel}</p> : null}
+            {task.comment ? (
+              <p className="text-sm text-amber-100/90 whitespace-pre-wrap">{task.comment}</p>
+            ) : null}
           </div>
-          <p className="text-sm text-amber-200/80">
-            {QUEUE_LABELS[task.bucket]} · {PERIODICITY_LABELS[task.periodicity]} · Ценность {taskValue}
-          </p>
-          {deadlineLabel ? <p className="text-xs text-amber-200/70">Дедлайн {deadlineLabel}</p> : null}
-          {task.comment ? (
-            <p className="text-sm text-amber-100/90 whitespace-pre-wrap">{task.comment}</p>
-          ) : null}
         </div>
         <div className="flex flex-col items-stretch gap-2 shrink-0">
           {showUndo ? (
@@ -345,6 +381,8 @@ export function ProjectsPage() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [projectCompletionAward, setProjectCompletionAward] = useState<ProjectCompletionBonusAward | null>(null);
+  const [draggingProjectTaskId, setDraggingProjectTaskId] = useState<string | null>(null);
+  const [dragOverProjectTaskId, setDragOverProjectTaskId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -448,18 +486,13 @@ export function ProjectsPage() {
   const sortedSelectedActiveTasks = useMemo(
     () =>
       [...selectedProjectActiveTasks].sort((left, right) => {
-        const leftStatus = taskStatusById[left.id];
-        const rightStatus = taskStatusById[right.id];
-        if (leftStatus === 'overdue' && rightStatus !== 'overdue') return -1;
-        if (rightStatus === 'overdue' && leftStatus !== 'overdue') return 1;
-        const leftCreatedAt = Date.parse(left.createdAt);
-        const rightCreatedAt = Date.parse(right.createdAt);
-        if (!Number.isNaN(leftCreatedAt) && !Number.isNaN(rightCreatedAt) && leftCreatedAt !== rightCreatedAt) {
-          return rightCreatedAt - leftCreatedAt;
+        const sortDelta = getTaskSortValue(right) - getTaskSortValue(left);
+        if (sortDelta !== 0) {
+          return sortDelta;
         }
         return left.title.localeCompare(right.title, 'ru-RU');
       }),
-    [selectedProjectActiveTasks, taskStatusById]
+    [selectedProjectActiveTasks]
   );
 
   const sortedSelectedCompletedTasks = useMemo(
@@ -469,6 +502,73 @@ export function ProjectsPage() {
       ),
     [selectedProjectCompletedTasks]
   );
+
+  const canReorderProjectTasks = sortedSelectedActiveTasks.length > 1 && !busyTaskId;
+
+  const reorderProjectTasks = async (sourceId: string, targetId: string) => {
+    const sourceIndex = sortedSelectedActiveTasks.findIndex((task) => task.id === sourceId);
+    const targetIndex = sortedSelectedActiveTasks.findIndex((task) => task.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1 || sourceIndex === targetIndex) return;
+
+    const reordered = [...sortedSelectedActiveTasks];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    const maxSortValue = reordered.reduce(
+      (maxValue, task) => Math.max(maxValue, getTaskSortValue(task)),
+      Date.now()
+    );
+    const base = maxSortValue + reordered.length;
+    const reorderedWithSort = reordered.map((task, index) => ({
+      ...task,
+      sortOrder: base - index
+    }));
+    const updatedMap = new Map(reorderedWithSort.map((task) => [task.id, task]));
+
+    setTasks((prev) => prev.map((task) => updatedMap.get(task.id) ?? task));
+    setDraggingProjectTaskId(null);
+    setDragOverProjectTaskId(null);
+
+    try {
+      await Promise.all(reorderedWithSort.map((task) => updateTask(task)));
+      await load();
+    } catch (error) {
+      await showAppAlert('Не удалось изменить порядок задач проекта.');
+      await load();
+    }
+  };
+
+  const handleProjectTaskDragStart = (event: DragEvent<HTMLDivElement>, taskId: string) => {
+    if (!canReorderProjectTasks) return;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', taskId);
+    setDraggingProjectTaskId(taskId);
+  };
+
+  const handleProjectTaskDragOver = (event: DragEvent<HTMLDivElement>, taskId: string) => {
+    if (!canReorderProjectTasks || !draggingProjectTaskId) return;
+    if (draggingProjectTaskId === taskId) return;
+    if (!sortedSelectedActiveTasks.some((task) => task.id === taskId)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setDragOverProjectTaskId(taskId);
+  };
+
+  const handleProjectTaskDrop = async (event: DragEvent<HTMLDivElement>, taskId: string) => {
+    if (!canReorderProjectTasks) return;
+    event.preventDefault();
+    const sourceId = draggingProjectTaskId ?? event.dataTransfer.getData('text/plain');
+    if (!sourceId || sourceId === taskId) {
+      setDragOverProjectTaskId(null);
+      return;
+    }
+    await reorderProjectTasks(sourceId, taskId);
+  };
+
+  const handleProjectTaskDragEnd = () => {
+    setDraggingProjectTaskId(null);
+    setDragOverProjectTaskId(null);
+  };
 
   return (
     <div className="min-h-screen">
@@ -572,6 +672,16 @@ export function ProjectsPage() {
                           void handleUndo(nextTask);
                         }}
                         onEdit={openEditTask}
+                        dragEnabled={canReorderProjectTasks}
+                        showDragGrip={canReorderProjectTasks}
+                        dragging={draggingProjectTaskId === task.id}
+                        dragOver={dragOverProjectTaskId === task.id && draggingProjectTaskId !== task.id}
+                        onDragStart={handleProjectTaskDragStart}
+                        onDragOver={handleProjectTaskDragOver}
+                        onDrop={(event, taskId) => {
+                          void handleProjectTaskDrop(event, taskId);
+                        }}
+                        onDragEnd={handleProjectTaskDragEnd}
                       />
                     ))}
                   </div>
