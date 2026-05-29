@@ -193,6 +193,12 @@ const getProjectStatusToneClass = (status: ProjectStatus) => {
   return 'tm-project-status-active';
 };
 
+const getProjectStatusChipClass = (status: ProjectStatus) => {
+  if (status === 'completed' || status === 'active') return 'tm-chip-success';
+  if (status === 'paused') return 'tm-chip-warning';
+  return 'tm-chip-muted';
+};
+
 function ProjectProgressBar({ value }: { value: number }) {
   const normalized = Math.max(0, Math.min(100, Math.round(value)));
   return (
@@ -213,7 +219,7 @@ function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
   const { locale } = useLocale();
   const copy = PROJECTS_COPY[locale];
   return (
-    <span className={`tm-project-status ${getProjectStatusToneClass(status)}`}>
+    <span className={`tm-project-status tm-chip ${getProjectStatusToneClass(status)} ${getProjectStatusChipClass(status)}`}>
       {copy.statusLabels[status]}
     </span>
   );
@@ -448,8 +454,12 @@ function ProjectTaskRow({
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="tm-task-title whitespace-normal break-words">{task.title}</h3>
-              {status === 'overdue' ? <span className="tm-badge tm-badge-danger">{copy.overdue}</span> : null}
-              {status === 'missed' ? <span className="tm-badge tm-badge-danger">{copy.missed}</span> : null}
+              {status === 'overdue' ? (
+                <span className="tm-badge tm-badge-danger tm-chip tm-chip-danger">{copy.overdue}</span>
+              ) : null}
+              {status === 'missed' ? (
+                <span className="tm-badge tm-badge-danger tm-chip tm-chip-danger">{copy.missed}</span>
+              ) : null}
             </div>
             <p className="text-sm text-amber-200/80">
               {copy.queueLabels[task.bucket]} · {copy.periodicityLabels[task.periodicity]} · {copy.value} {taskValue}
@@ -846,7 +856,7 @@ export function ProjectsPage() {
               <section className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-xl font-semibold tm-title">{copy.activeTasks}</h2>
-                  <span className="tm-badge tm-badge-note">{selectedProjectActiveTasks.length}</span>
+                  <span className="tm-badge tm-badge-note tm-chip tm-chip-muted">{selectedProjectActiveTasks.length}</span>
                 </div>
                 {sortedSelectedActiveTasks.length > 0 ? (
                   <div className="space-y-3">
@@ -887,7 +897,7 @@ export function ProjectsPage() {
               <section className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-xl font-semibold tm-title">{copy.completedTasks}</h2>
-                  <span className="tm-badge tm-badge-note">{selectedProjectCompletedTasks.length}</span>
+                  <span className="tm-badge tm-badge-note tm-chip tm-chip-muted">{selectedProjectCompletedTasks.length}</span>
                 </div>
                 {sortedSelectedCompletedTasks.length > 0 ? (
                   <div className="space-y-3">

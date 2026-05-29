@@ -363,8 +363,10 @@ export function DailyLogPage({ onBack }: { onBack: () => void }) {
                             )}
                           </div>
                           <span
-                            className={`tm-badge ${
-                              item.status === 'missed' ? 'tm-badge-danger' : ''
+                            className={`tm-badge tm-chip ${
+                              item.status === 'missed'
+                                ? 'tm-badge-danger tm-chip-danger'
+                                : 'tm-chip-success'
                             }`}
                           >
                             {item.status === 'missed' ? '✕' : '✓'}

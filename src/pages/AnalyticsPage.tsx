@@ -886,7 +886,7 @@ export function AnalyticsPage() {
                     {topTasks.map(({ task, value }) => (
                       <div key={task.id} className="flex items-center justify-between gap-2">
                         <p className="text-amber-50 font-semibold truncate">{task.title}</p>
-                        <span className="tm-pill">{value} XP</span>
+                        <span className="tm-pill tm-chip tm-chip-xp">{value} XP</span>
                       </div>
                     ))}
                   </div>

@@ -1400,12 +1400,14 @@ function TaskCard({
             {copy.periodicityLabels[task.periodicity]} ·{' '}
             <span className={rarityStyle.text}>{copy.rarityLabels[task.rarity]}</span> · {copy.valueLabel} {taskValue}
           </span>
-          {hasComment ? <span className="tm-badge tm-badge-note">{copy.commentBadge}</span> : null}
+          {hasComment ? (
+            <span className="tm-badge tm-badge-note tm-chip tm-chip-muted">{copy.commentBadge}</span>
+          ) : null}
         </p>
         {skillTags.length ? (
           <div className="tm-task-tags">
             {skillTags.map((tag, index) => (
-              <span key={`${task.id}-tag-${index}`} className="tm-task-tag">
+              <span key={`${task.id}-tag-${index}`} className="tm-task-tag tm-chip tm-chip-muted tm-chip-sm">
                 {tag}
               </span>
             ))}
@@ -1622,14 +1624,16 @@ function OverdueTaskCard({
                   {copy.periodicityLabels[task.periodicity]} ·{' '}
                   <span className={rarityStyle.text}>{copy.rarityLabels[task.rarity]}</span> · {copy.valueLabel} {taskValue}
                 </span>
-                {hasComment ? <span className="tm-badge tm-badge-note">{copy.commentBadge}</span> : null}
-                <span className="tm-badge tm-badge-danger">{copy.overdueBadge}</span>
+                {hasComment ? (
+                  <span className="tm-badge tm-badge-note tm-chip tm-chip-muted">{copy.commentBadge}</span>
+                ) : null}
+                <span className="tm-badge tm-badge-danger tm-chip tm-chip-danger">{copy.overdueBadge}</span>
               </p>
               {overdueLabel ? <p className="text-xs text-rose-200">{overdueLabel}</p> : null}
               {skillTags.length ? (
                 <div className="tm-task-tags">
                   {skillTags.map((tag, index) => (
-                    <span key={`${task.id}-tag-${index}`} className="tm-task-tag">
+                    <span key={`${task.id}-tag-${index}`} className="tm-task-tag tm-chip tm-chip-muted tm-chip-sm">
                       {tag}
                     </span>
                   ))}
@@ -1764,7 +1768,13 @@ function QueueSection({
     <section className="space-y-3">
       <div className="flex items-center gap-3">
         <h3 className={`text-lg font-semibold ${toneClassName}`}>{title}</h3>
-        <span className={toneClassName.includes('rose') ? 'tm-badge tm-badge-danger' : 'tm-badge tm-badge-note'}>
+        <span
+          className={
+            toneClassName.includes('rose')
+              ? 'tm-badge tm-badge-danger tm-chip tm-chip-danger'
+              : 'tm-badge tm-badge-note tm-chip tm-chip-muted'
+          }
+        >
           {count}
         </span>
       </div>
@@ -2114,7 +2124,7 @@ function WeekdaySelector({
 function CompletionFeedbackToast({ feedback }: { feedback: CompletionFeedback }) {
   return (
     <div className="tm-today-feedback-toast" role="status" aria-live="polite">
-      <span className="tm-pill">{formatXpDelta(feedback.xpDelta)}</span>
+      <span className="tm-pill tm-chip tm-chip-xp">{formatXpDelta(feedback.xpDelta)}</span>
       <p className="text-sm font-semibold text-amber-50 truncate max-w-[14rem] sm:max-w-[20rem]">
         {feedback.message}
       </p>
@@ -2363,17 +2373,23 @@ function ExecutionTaskCard({
             </button>
             {overdueLabel || dueSoonMeta || planning ? (
               <div className="tm-task-card-flags flex basis-full flex-wrap items-center gap-2 sm:basis-auto">
-                {overdueLabel ? <span className="tm-badge tm-badge-danger">{overdueLabel}</span> : null}
+                {overdueLabel ? (
+                  <span className="tm-badge tm-badge-danger tm-chip tm-chip-danger">{overdueLabel}</span>
+                ) : null}
                 {dueSoonMeta ? (
                   <span
-                    className={`tm-badge ${
-                      dueSoonMeta.urgency === 'critical' ? 'tm-badge-danger' : 'tm-badge-note'
+                    className={`tm-badge tm-chip ${
+                      dueSoonMeta.urgency === 'critical'
+                        ? 'tm-badge-danger tm-chip-danger'
+                        : 'tm-badge-note tm-chip-warning'
                     }`}
                   >
                     {dueSoonMeta.label}
                   </span>
                 ) : null}
-                {planning ? <span className="tm-badge tm-badge-note">{copy.planningBadge}</span> : null}
+                {planning ? (
+                  <span className="tm-badge tm-badge-note tm-chip tm-chip-muted">{copy.planningBadge}</span>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -2385,7 +2401,7 @@ function ExecutionTaskCard({
           </p>
           {projectLabel ? (
             <div>
-              <span className="tm-project-chip">{projectLabel}</span>
+              <span className="tm-project-chip tm-chip tm-chip-project">{projectLabel}</span>
             </div>
           ) : null}
           {hasChecklist ? (
@@ -2396,7 +2412,7 @@ function ExecutionTaskCard({
           {skillTags.length ? (
             <div className="tm-task-tags">
               {skillTags.map((tag, index) => (
-                <span key={`${task.id}-tag-${index}`} className="tm-task-tag">
+                <span key={`${task.id}-tag-${index}`} className="tm-task-tag tm-chip tm-chip-muted tm-chip-sm">
                   {tag}
                 </span>
               ))}
@@ -3915,8 +3931,12 @@ export function TodayPage() {
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {searchActive ? <span className="tm-pill">{copy.searchPill(searchQuery.trim())}</span> : null}
-              {filtersActive ? <span className="tm-pill">{copy.filterPill(copy.periodicityLabels[filter])}</span> : null}
+              {searchActive ? (
+                <span className="tm-pill tm-chip tm-chip-muted">{copy.searchPill(searchQuery.trim())}</span>
+              ) : null}
+              {filtersActive ? (
+                <span className="tm-pill tm-chip tm-chip-muted">{copy.filterPill(copy.periodicityLabels[filter])}</span>
+              ) : null}
               {hasSearchOrFilters ? (
                 <button
                   type="button"
@@ -4002,7 +4022,7 @@ export function TodayPage() {
                           <h3 className="text-lg font-semibold tm-title">{copy.nextPreviewTitle}</h3>
                           <p className="text-sm text-amber-200/70">{copy.nextPreviewSubtitle}</p>
                         </div>
-                        <span className="tm-badge tm-badge-note">{nextTasks.length}</span>
+                        <span className="tm-badge tm-badge-note tm-chip tm-chip-muted">{nextTasks.length}</span>
                       </div>
                       {nextPreviewTasks.length > 0 ? (
                         <div className="space-y-2">
@@ -4047,7 +4067,7 @@ export function TodayPage() {
                     {copy.queueDescriptions[activeQueue]}
                   </p>
                 </div>
-                <span className="tm-badge tm-badge-note">{queueCounts[activeQueue]}</span>
+                <span className="tm-badge tm-badge-note tm-chip tm-chip-muted">{queueCounts[activeQueue]}</span>
               </div>
 
               {currentQueueTasks.length > 0 ? (

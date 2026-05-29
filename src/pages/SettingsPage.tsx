@@ -1476,7 +1476,13 @@ export function SettingsPage({
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-semibold tm-title min-w-0 break-words">{project.title}</span>
-                              <span className={`tm-badge ${project.mode === 'reuse' ? 'tm-badge-note' : ''}`}>
+                              <span
+                                className={`tm-badge tm-chip ${
+                                  project.mode === 'reuse'
+                                    ? 'tm-badge-note tm-chip-muted'
+                                    : 'tm-chip-success'
+                                }`}
+                              >
                                 {project.mode === 'reuse' ? copy.reuseBadge : copy.newBadge}
                               </span>
                             </div>
@@ -1533,9 +1539,9 @@ export function SettingsPage({
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-semibold tm-title min-w-0 break-words">{task.title}</span>
-                              <span className="tm-badge">{copy.planBucketLabels[task.bucket]}</span>
+                              <span className="tm-badge tm-chip tm-chip-muted">{copy.planBucketLabels[task.bucket]}</span>
                             {task.projectTitle ? (
-                                <span className="tm-badge tm-badge-note">{task.projectTitle}</span>
+                                <span className="tm-badge tm-badge-note tm-chip tm-chip-project">{task.projectTitle}</span>
                               ) : null}
                             </div>
                             <p className="text-[11px] text-amber-200/68">

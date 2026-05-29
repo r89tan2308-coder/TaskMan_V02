@@ -281,7 +281,7 @@ export function ManualPage({ onBack }: { onBack: () => void }) {
                 <a
                   key={section.id}
                   href={`#manual-${section.id}`}
-                  className="tm-pill"
+                  className="tm-pill tm-chip tm-chip-muted"
                 >
                   {section.title}
                 </a>
