@@ -6379,3 +6379,159 @@
     padding-bottom: 0.78rem;
   }
 }
+
+/* Phase 1C: responsive / overflow sanity pass. Keep the existing visuals,
+   but make narrow viewports safer with long labels and dense panels. */
+.tm-app {
+  overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+  .tm-app {
+    overflow-x: hidden;
+  }
+}
+
+.tm-app .tm-frame,
+.tm-app .tm-panel,
+.tm-app .tm-panel-soft,
+.tm-app .tm-card,
+.tm-app .tm-screen {
+  max-width: 100%;
+}
+
+.tm-app .tm-nav-inner .tm-tab,
+.tm-app .tm-progress-tab {
+  max-width: min(12rem, 58vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-app .tm-project-chip,
+.tm-app .tm-task-tag,
+.tm-app .tm-plan-preview-row .tm-badge,
+.tm-app .tm-task-card-flags {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tm-app .tm-project-chip,
+.tm-app .tm-task-tag,
+.tm-app .tm-plan-preview-row .tm-badge,
+.tm-app .tm-task-details-text,
+.tm-app .tm-history-meta,
+.tm-app .tm-transfer-prompt,
+.tm-app .tm-settings-data-note,
+.tm-app .tm-plan-preview-row,
+.tm-app .tm-plan-preview-row .tm-title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.tm-app .tm-project-chip,
+.tm-app .tm-task-tag,
+.tm-app .tm-plan-preview-row .tm-badge {
+  white-space: normal;
+}
+
+.tm-app .tm-analytics-grid,
+.tm-app .tm-analytics-card,
+.tm-app .tm-chart-with-axis,
+.tm-app .tm-chart-grid-layout,
+.tm-app .tm-line-chart,
+.tm-app .tm-skills-grid,
+.tm-app .tm-skills-panel,
+.tm-app .tm-skills-secondary {
+  min-width: 0;
+}
+
+.tm-app .tm-line-chart-label,
+.tm-app .tm-skills-meta-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 520px) {
+  .tm-app .tm-skills-meta-item {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.08rem;
+  }
+
+  .tm-app .tm-skills-meta-label {
+    max-width: 100%;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .tm-app .tm-stat-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem 0.6rem;
+  }
+
+  .tm-app .tm-stat-meter {
+    grid-column: 1 / -1;
+  }
+
+  .tm-app .tm-stat-value {
+    justify-self: end;
+  }
+
+  .tm-app .tm-wheel-legend {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tm-app .tm-wheel-legend-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .tm-app .tm-nav-shell {
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+  }
+
+  .tm-app .tm-nav-inner {
+    gap: 0.32rem;
+  }
+
+  .tm-app .tm-nav-inner .tm-tab {
+    max-width: 52vw;
+    padding-left: 0.62rem;
+    padding-right: 0.62rem;
+  }
+
+  .tm-app .tm-progress-tab {
+    max-width: 50vw;
+  }
+
+  .tm-app .tm-today-summary-header {
+    gap: 0.55rem;
+  }
+
+  .tm-app .tm-today-reward-header-remaining {
+    max-width: 48%;
+    margin-right: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .tm-app .tm-today-mini-metrics {
+    gap: 0.32rem;
+  }
+
+  .tm-app .tm-today-mini-metric {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.18rem;
+    padding: 0.38rem 0.42rem;
+  }
+
+  .tm-app .tm-today-mini-label {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

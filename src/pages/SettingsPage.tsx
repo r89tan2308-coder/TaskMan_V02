@@ -1398,7 +1398,7 @@ export function SettingsPage({
       {planPreview ? (
         <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center px-3 py-4 sm:px-4 sm:py-6 overflow-y-auto z-[220]">
           <div
-            className="w-full max-w-4xl tm-panel p-3 sm:p-4 shadow-xl max-h-[90vh] overflow-hidden flex flex-col gap-3"
+            className="w-full max-w-4xl tm-panel p-3 sm:p-4 shadow-xl max-h-[90vh] min-h-0 overflow-hidden flex flex-col gap-3"
             role="dialog"
             aria-modal="true"
             aria-labelledby={planPreviewTitleId}
@@ -1444,7 +1444,7 @@ export function SettingsPage({
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-3">
               <section className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold tm-title">{copy.projectsTitle}</h3>
@@ -1465,7 +1465,7 @@ export function SettingsPage({
                           />
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-semibold tm-title">{project.title}</span>
+                              <span className="font-semibold tm-title min-w-0 break-words">{project.title}</span>
                               <span className={`tm-badge ${project.mode === 'reuse' ? 'tm-badge-note' : ''}`}>
                                 {project.mode === 'reuse' ? copy.reuseBadge : copy.newBadge}
                               </span>
@@ -1522,7 +1522,7 @@ export function SettingsPage({
                           />
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-semibold tm-title">{task.title}</span>
+                              <span className="font-semibold tm-title min-w-0 break-words">{task.title}</span>
                               <span className="tm-badge">{copy.planBucketLabels[task.bucket]}</span>
                             {task.projectTitle ? (
                                 <span className="tm-badge tm-badge-note">{task.projectTitle}</span>

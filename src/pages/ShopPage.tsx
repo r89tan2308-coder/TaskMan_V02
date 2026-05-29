@@ -486,7 +486,7 @@ export function ShopPage() {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       {isEditing ? (
-                        <div className="space-y-2 flex-1">
+                        <div className="space-y-2 flex-1 min-w-0">
                           <input
                             value={editName}
                             onChange={(event) => setEditName(event.target.value)}
@@ -532,11 +532,11 @@ export function ShopPage() {
                           onClick={() =>
                             setExpandedRewardId((prev) => (prev === reward.id ? null : reward.id))
                           }
-                          className="text-left flex-1 space-y-2"
+                          className="text-left flex-1 min-w-0 space-y-2"
                           aria-expanded={isExpanded}
                           aria-controls={`reward-actions-${reward.id}`}
                         >
-                          <p className="text-amber-50 font-semibold">{reward.name}</p>
+                          <p className="text-amber-50 font-semibold break-words">{reward.name}</p>
                           <p className="text-sm text-amber-200/80">
                             {copy.cost(reward.cost)}
                             {isPinned ? ` · ${copy.pinned}` : ''}
@@ -567,7 +567,7 @@ export function ShopPage() {
                           </p>
                         </button>
                       )}
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         {isEditing ? (
                           <>
                           <button

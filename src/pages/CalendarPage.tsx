@@ -626,7 +626,7 @@ export function CalendarPage() {
                               key={task.id}
                               className={`tm-card ${rarityStyle.accent} border-l-4 ${rarityStyle.border} px-3 py-2`}
                             >
-                              <p className="text-sm text-amber-50">{task.title}</p>
+                              <p className="text-sm text-amber-50 break-words">{task.title}</p>
                               <p className="text-xs text-amber-200/70">
                                 {copy.periodicityLabels[task.periodicity]}
                               </p>
@@ -641,14 +641,14 @@ export function CalendarPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="grid grid-cols-7 gap-2 text-xs text-amber-200/70">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2 text-xs text-amber-200/70">
                 {copy.weekdayLabels.map((label) => (
                   <div key={label} className="text-center">
                     {label}
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {calendarDays.map((date) => {
                   const dayTasks = tasksForDate(date);
                   const isCurrentMonth = date.getMonth() === selectedDate.getMonth();
@@ -659,7 +659,7 @@ export function CalendarPage() {
                       key={date.toISOString()}
                       type="button"
                       onClick={() => openDateDetails(date)}
-                      className={`tm-panel-soft p-2 text-left min-h-[96px] flex flex-col gap-1 ${
+                      className={`tm-panel-soft p-1.5 sm:p-2 text-left min-h-[72px] sm:min-h-[96px] flex flex-col gap-1 ${
                         isCurrentMonth ? '' : 'opacity-50'
                       } ${isToday ? 'border border-amber-400/60' : ''} ${
                         isSelected ? 'border border-amber-300' : ''
