@@ -1247,9 +1247,9 @@ export function SettingsPage({
               </span>
             </div>
             {transferOpen ? (
-              <div className="tm-panel-soft tm-surface-inset p-3 space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
+              <div className="tm-panel-soft tm-surface-inset tm-transfer-panel p-3 space-y-4">
+                <div className="tm-transfer-panel-header">
+                  <div className="tm-transfer-copy">
                     <p className="text-sm text-amber-100">{copy.transferTitle}</p>
                     <p className="text-xs text-amber-200/70">
                       {copy.transferDescription}
@@ -1292,15 +1292,15 @@ export function SettingsPage({
                   </div>
                 ) : null}
 
-                <div className="space-y-3">
-                  <div className="min-w-0">
+                <div className="tm-transfer-section">
+                  <div className="tm-transfer-section-heading">
                     <p className="text-sm text-amber-100">{copy.planning}</p>
                     <p className="text-xs text-amber-200/70">
                       {copy.planningDescription}
                     </p>
                   </div>
                   <div className="tm-transfer-action-row">
-                    <div className="min-w-0">
+                    <div className="tm-transfer-action-copy">
                       <p className="text-sm text-amber-100">{copy.exportPlan}</p>
                       <p className="text-xs text-amber-200/70">
                         {copy.exportPlanDescription}
@@ -1317,7 +1317,7 @@ export function SettingsPage({
                     </div>
                   </div>
                   <div className="tm-transfer-action-row">
-                    <div className="min-w-0">
+                    <div className="tm-transfer-action-copy">
                       <p className="text-sm text-amber-100">{copy.importPlan}</p>
                       <p className="text-xs text-amber-200/70">
                         {copy.importPlanDescription}
@@ -1334,15 +1334,15 @@ export function SettingsPage({
                     </div>
                   </div>
                 </div>
-                <div className="border-t border-amber-400/15 pt-4 space-y-3">
-                  <div className="min-w-0">
+                <div className="tm-transfer-section tm-transfer-section-separated">
+                  <div className="tm-transfer-section-heading">
                     <p className="text-sm text-amber-100">{copy.backupTitle}</p>
                     <p className="text-xs text-amber-200/70">
                       {copy.backupDescription}
                     </p>
                   </div>
                   <div className="tm-transfer-action-row">
-                    <div className="min-w-0">
+                    <div className="tm-transfer-action-copy">
                       <p className="text-sm text-amber-100">{copy.downloadBackup}</p>
                       <p className="text-xs text-amber-200/70">
                         {copy.downloadBackupDescription}
@@ -1359,7 +1359,7 @@ export function SettingsPage({
                     </div>
                   </div>
                   <div className="tm-transfer-action-row">
-                    <div className="min-w-0">
+                    <div className="tm-transfer-action-copy">
                       <p className="text-sm text-amber-100">{copy.restoreBackup}</p>
                       <p className="text-xs text-amber-200/70">
                         {copy.restoreBackupDescription}
