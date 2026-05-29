@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { showAppAlert, showAppConfirm } from '../components/AppDialog';
 import {
   readAllForExport,
@@ -1405,15 +1406,15 @@ export function SettingsPage({
           </div>
         </div>
       </div>
-      {planPreview ? (
-        <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center px-3 py-4 sm:px-4 sm:py-6 overflow-y-auto z-[220]">
+      {planPreview ? createPortal(
+        <div className="tm-plan-preview-overlay">
           <div
-            className="w-full max-w-4xl tm-panel p-3 sm:p-4 shadow-xl max-h-[90vh] min-h-0 overflow-hidden flex flex-col gap-3"
+            className="tm-plan-preview-shell tm-panel"
             role="dialog"
             aria-modal="true"
             aria-labelledby={planPreviewTitleId}
           >
-            <div className="space-y-2">
+            <div className="tm-plan-preview-header space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <h2 id={planPreviewTitleId} className="text-lg sm:text-xl font-semibold tm-title">{copy.previewTitle}</h2>
@@ -1454,7 +1455,7 @@ export function SettingsPage({
                 </button>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-3">
+            <div className="tm-plan-preview-body space-y-3">
               <section className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold tm-title">{copy.projectsTitle}</h3>
@@ -1570,11 +1571,11 @@ export function SettingsPage({
                 )}
               </section>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t border-amber-400/15 pt-2.5">
+            <div className="tm-plan-preview-footer">
               <p className="text-xs text-amber-200/70">
                 {copy.importSelectedNote}
               </p>
-              <div className="flex justify-end gap-2">
+              <div className="tm-plan-preview-footer-actions">
                 <button
                   onClick={closePlanPreview}
                   className="tm-button tm-button-ghost tm-button-sm px-3 py-1.5"
@@ -1592,7 +1593,8 @@ export function SettingsPage({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   );
