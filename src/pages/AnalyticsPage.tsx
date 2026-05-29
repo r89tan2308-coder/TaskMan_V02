@@ -511,7 +511,7 @@ export function AnalyticsPage() {
           ) : (
             <>
               <section className="tm-analytics-grid grid gap-4 md:grid-cols-2">
-                <div className="tm-panel-soft tm-analytics-card space-y-3">
+                <div className="tm-panel-soft tm-surface-inset tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="tm-label">{copy.periods.week}</p>
                     <p className="text-xs text-amber-200/80">
@@ -556,7 +556,7 @@ export function AnalyticsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="tm-panel-soft tm-analytics-card space-y-3">
+                <div className="tm-panel-soft tm-surface-inset tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="tm-label">{copy.periods.month}</p>
                     <p className="text-xs text-amber-200/80">
@@ -662,7 +662,7 @@ export function AnalyticsPage() {
                 </div>
               </section>
               <section className="tm-analytics-grid grid gap-4 md:grid-cols-2">
-                <div className="tm-panel-soft tm-analytics-card space-y-3">
+                <div className="tm-panel-soft tm-surface-inset tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="tm-label">{copy.periods.quarter}</p>
                     <p className="text-xs text-amber-200/80">
@@ -764,7 +764,7 @@ export function AnalyticsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="tm-panel-soft tm-analytics-card space-y-3">
+                <div className="tm-panel-soft tm-surface-inset tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="tm-label">{copy.periods.year}</p>
                     <p className="text-xs text-amber-200/80">
@@ -872,7 +872,7 @@ export function AnalyticsPage() {
                 </div>
               </section>
 
-              <section className="tm-panel-soft tm-analytics-card space-y-3">
+              <section className="tm-panel-soft tm-surface-inset tm-analytics-card space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="tm-label">{copy.topByValue}</p>
                   <p className="text-xs text-amber-200/80">

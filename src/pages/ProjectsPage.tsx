@@ -816,7 +816,7 @@ export function ProjectsPage() {
                 </div>
               </section>
 
-              <section className="tm-panel-soft p-4 space-y-3">
+              <section className="tm-panel-soft tm-surface-inset p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-1">
                     <p className="text-sm text-amber-200/80">
@@ -842,7 +842,7 @@ export function ProjectsPage() {
               </section>
 
               {selectedProjectDisplayStatus === 'completed' ? (
-                <section className="tm-panel-soft p-4 space-y-2">
+                <section className="tm-panel-soft tm-surface-success p-4 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-semibold tm-title">{copy.projectCompleted}</h2>
                     <ProjectStatusBadge status="completed" />
@@ -890,7 +890,7 @@ export function ProjectsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="tm-panel-soft p-4">
+                  <div className="tm-panel-soft tm-surface-muted p-4">
                     <p className="text-sm text-amber-200/80">
                       {copy.emptyActive}
                     </p>
@@ -921,7 +921,7 @@ export function ProjectsPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="tm-panel-soft p-4">
+                  <div className="tm-panel-soft tm-surface-muted p-4">
                     <p className="text-sm text-amber-200/80">
                       {copy.emptyCompleted}
                     </p>
@@ -952,7 +952,7 @@ export function ProjectsPage() {
                   <p className="text-amber-200/80">{copy.loadingProjects}</p>
                 </div>
               ) : projects.length === 0 ? (
-                <div className="tm-panel-soft p-5 space-y-3">
+                <div className="tm-panel-soft tm-surface-muted p-5 space-y-3">
                   <h2 className="text-xl font-semibold tm-title">{copy.emptyTitle}</h2>
                   <p className="text-sm text-amber-200/80">
                     {copy.emptyText}
@@ -979,7 +979,7 @@ export function ProjectsPage() {
                         key={project.id}
                         type="button"
                         onClick={() => setSelectedProjectId(project.id)}
-                        className="tm-panel-soft tm-project-card p-4 text-left w-full"
+                        className="tm-panel-soft tm-surface-interactive tm-project-card p-4 text-left w-full"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="min-w-0 space-y-2 flex-1">

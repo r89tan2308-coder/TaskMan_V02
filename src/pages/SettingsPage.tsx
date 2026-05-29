@@ -917,7 +917,7 @@ export function SettingsPage({
               </span>
             </div>
             {interfaceOpen ? (
-              <div className="tm-panel-soft p-3 space-y-2">
+              <div className="tm-panel-soft tm-surface-inset p-3 space-y-2">
                 <p className="text-xs text-amber-200/70">{copy.language}</p>
                 <div className="tm-segmented-control" role="group" aria-label={copy.language}>
                   {(['ru', 'en'] as const).map((nextLocale) => (
@@ -1062,7 +1062,7 @@ export function SettingsPage({
               <span className="text-sm text-amber-200/80">{copy.currentBalance(xp)}</span>
             </div>
             {editingXp ? (
-              <div className="tm-panel-soft p-3 space-y-3">
+              <div className="tm-panel-soft tm-surface-inset p-3 space-y-3">
                 <div>
                   <label className="block text-sm tm-label mb-1">{copy.xpBalance}</label>
                   <input
@@ -1124,7 +1124,7 @@ export function SettingsPage({
             </div>
 
             {notificationsOpen ? (
-              <div className="tm-panel-soft p-3 space-y-3">
+              <div className="tm-panel-soft tm-surface-inset p-3 space-y-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="tm-label">{reminderCopy.browserNotifications}</p>
@@ -1247,7 +1247,7 @@ export function SettingsPage({
               </span>
             </div>
             {transferOpen ? (
-              <div className="tm-panel-soft p-3 space-y-4">
+              <div className="tm-panel-soft tm-surface-inset p-3 space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-sm text-amber-100">{copy.transferTitle}</p>
@@ -1266,7 +1266,7 @@ export function SettingsPage({
                 </div>
 
                 {transferGuideOpen ? (
-                  <div className="tm-transfer-guide space-y-3">
+                  <div className="tm-transfer-guide tm-surface-inset space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="space-y-2">
                         <p className="text-sm font-semibold tm-title">{copy.planForAi}</p>
@@ -1433,7 +1433,7 @@ export function SettingsPage({
                 <span>{copy.metrics.deselected(previewDeselectedCount)}</span>
               </div>
               {previewHasBlockedSelection ? (
-                <div className="tm-plan-preview-warning">
+                <div className="tm-plan-preview-warning tm-surface-warning">
                   {copy.blockedWarning}
                 </div>
               ) : null}
@@ -1466,7 +1466,7 @@ export function SettingsPage({
                       const isSelected = selectedProjectIds.has(project.clientId);
                       const selectedTaskCount = selectedTaskCountByProjectClientId.get(project.clientId) ?? 0;
                       return (
-                        <label key={project.id} className="tm-plan-preview-row">
+                        <label key={project.id} className="tm-plan-preview-row tm-surface-preview">
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -1526,8 +1526,8 @@ export function SettingsPage({
                       return (
                         <label
                           key={task.id}
-                          className={`tm-plan-preview-row ${
-                            task.exactDuplicate ? 'tm-plan-preview-row-muted' : ''
+                          className={`tm-plan-preview-row tm-surface-preview ${
+                            task.exactDuplicate ? 'tm-plan-preview-row-muted tm-surface-muted' : ''
                           }`}
                         >
                           <input

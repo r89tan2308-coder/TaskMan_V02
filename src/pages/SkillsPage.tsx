@@ -1006,7 +1006,7 @@ export function SkillsPage() {
           </header>
 
           <div className="tm-skills-grid">
-            <div className="tm-panel tm-reveal tm-reveal-delay-1 tm-skills-panel tm-skills-panel-center p-1 sm:p-2">
+            <div className="tm-panel tm-surface-elevated tm-reveal tm-reveal-delay-1 tm-skills-panel tm-skills-panel-center p-1 sm:p-2">
               <div className="tm-skills-panel-header">
                 <h2 className="text-lg font-semibold tm-title">{copy.wheelTitle}</h2>
               </div>
@@ -1179,7 +1179,7 @@ export function SkillsPage() {
             </div>
 
           <div
-            className="tm-panel tm-panel-clickable tm-reveal tm-reveal-delay-2 tm-skills-panel tm-skills-panel-left p-4"
+            className="tm-panel tm-panel-clickable tm-surface-interactive tm-reveal tm-reveal-delay-2 tm-skills-panel tm-skills-panel-left p-4"
             onClick={openCharacteristicsEditor}
             role="button"
             tabIndex={0}
@@ -1247,7 +1247,7 @@ export function SkillsPage() {
           </div>
 
           <div
-            className="tm-panel tm-panel-clickable tm-reveal tm-reveal-delay-3 tm-skills-panel tm-skills-panel-right p-4"
+            className="tm-panel tm-panel-clickable tm-surface-interactive tm-reveal tm-reveal-delay-3 tm-skills-panel tm-skills-panel-right p-4"
             onClick={openSkillsEditor}
             role="button"
             tabIndex={0}
@@ -1310,7 +1310,7 @@ export function SkillsPage() {
           </div>
           </div>
           <div className="tm-skills-secondary">
-              <div className="tm-panel tm-reveal tm-skills-panel p-4">
+              <div className="tm-panel tm-surface-elevated tm-reveal tm-skills-panel p-4">
                 <div className="tm-skills-panel-header">
                   <h2 className="text-lg font-semibold tm-title">{copy.balanceIndexTitle}</h2>
                 </div>
@@ -1338,7 +1338,7 @@ export function SkillsPage() {
                 </div>
               </div>
 
-              <div className="tm-panel tm-reveal tm-skills-panel p-4">
+              <div className="tm-panel tm-surface-elevated tm-reveal tm-skills-panel p-4">
                 <div className="tm-skills-panel-header tm-history-header">
                   <h2 className="text-lg font-semibold tm-title">{copy.historyTitle}</h2>
                   <button

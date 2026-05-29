@@ -393,7 +393,7 @@ export function ShopPage() {
           <h1 className="sr-only">{copy.title}</h1>
           <p className="tm-label">{copy.xpBalance(xp)}</p>
 
-          <div className="tm-panel-soft p-3 space-y-2">
+          <div className="tm-panel-soft tm-surface-inset p-3 space-y-2">
             <p className="tm-label">{copy.newReward}</p>
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -482,7 +482,7 @@ export function ShopPage() {
                 return (
                   <div
                     key={reward.id}
-                    className="tm-card px-4 py-3"
+                    className="tm-card tm-surface-compact px-4 py-3"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       {isEditing ? (

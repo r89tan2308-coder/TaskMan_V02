@@ -42,7 +42,7 @@ export function ProgressPage({
   return (
     <>
       <div className="max-w-5xl mx-auto px-2 sm:px-4 pt-4 pb-0">
-        <section className="tm-panel-soft tm-progress-subnav">
+        <section className="tm-panel-soft tm-surface-elevated tm-progress-subnav">
           <div className="tm-progress-subnav-copy">
             <h1 className="sr-only">{copy.title}</h1>
             <p className="text-xs text-amber-200/70">
