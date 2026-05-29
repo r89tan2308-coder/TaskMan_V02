@@ -249,17 +249,17 @@ function CalendarTaskSection({
   const { locale } = useLocale();
   const copy = CALENDAR_COPY[locale];
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
+    <section className="tm-calendar-task-section space-y-3">
+      <div className="tm-calendar-section-header flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold tm-title">{title}</h3>
         <span className="text-xs text-amber-200/70">{tasks.length}</span>
       </div>
       {tasks.length === 0 ? (
-        <div className="tm-panel-soft p-4">
+        <div className="tm-panel-soft tm-calendar-empty-panel p-4">
           <p className="text-sm text-amber-200/80">{emptyText}</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="tm-calendar-task-list space-y-3">
           {tasks.map((task) => {
             const rarityStyle = RARITY_STYLES[task.rarity] ?? RARITY_STYLES.common;
             const deadlineTime = mode === 'task' ? formatDeadlineTime(task.deadline) : null;
@@ -274,10 +274,10 @@ function CalendarTaskSection({
             return (
               <div
                 key={`${mode}-${task.id}`}
-                className={`tm-card ${rarityStyle.accent} border-l-4 ${rarityStyle.border} px-4 py-3 space-y-1.5`}
+                className={`tm-card tm-calendar-task-card ${rarityStyle.accent} border-l-4 ${rarityStyle.border} px-4 py-3 space-y-1.5`}
               >
-                <p className="text-amber-50 font-semibold break-words">{task.title}</p>
-                <p className="text-xs text-amber-200/70">
+                <p className="tm-calendar-task-title text-amber-50 font-semibold break-words">{task.title}</p>
+                <p className="tm-calendar-task-meta text-xs text-amber-200/70">
                   {copy.periodicityLabels[task.periodicity]}
                   {mode === 'task' && deadlineTime ? ` · ${deadlineTime}` : ''}
                   {mode === 'goal' && task.quota
@@ -285,16 +285,16 @@ function CalendarTaskSection({
                     : ''}
                 </p>
                 {weekdayLabel ? (
-                  <p className="text-xs text-amber-200/65">{copy.days}: {weekdayLabel}</p>
+                  <p className="tm-calendar-task-meta text-xs text-amber-200/65">{copy.days}: {weekdayLabel}</p>
                 ) : null}
                 {mode === 'goal' && quotaProgress ? (
-                  <p className="text-xs text-amber-200/75">
+                  <p className="tm-calendar-task-meta text-xs text-amber-200/75">
                     {copy.progress}: {quotaProgress.done} / {quotaProgress.count}
                     {quotaProgress.reached ? ` · ${copy.goalClosed}` : ''}
                   </p>
                 ) : null}
                 {commentPreview ? (
-                  <p className="text-sm text-amber-100/85 whitespace-pre-wrap break-words">
+                  <p className="tm-calendar-task-comment text-sm text-amber-100/85 whitespace-pre-wrap break-words">
                     {commentPreview}
                   </p>
                 ) : null}
@@ -339,11 +339,11 @@ function CalendarDayModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/65 flex items-start sm:items-center justify-center px-4 py-6"
+      className="tm-calendar-day-modal-overlay fixed inset-0 z-50 bg-black/65 flex items-start sm:items-center justify-center px-4 py-6"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg tm-panel p-4 sm:p-5 max-h-[85vh] overflow-y-auto space-y-4"
+        className="w-full max-w-lg tm-panel tm-calendar-day-modal p-4 sm:p-5 max-h-[85vh] overflow-y-auto space-y-4"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -539,12 +539,12 @@ export function CalendarPage() {
   );
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
-        <div className="tm-frame tm-reveal space-y-4 p-3 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen tm-calendar-page">
+      <div className="tm-calendar-container max-w-5xl mx-auto px-2 sm:px-4 py-8">
+        <div className="tm-frame tm-reveal tm-calendar-frame space-y-4 p-3 sm:p-6">
+          <div className="tm-calendar-toolbar flex flex-wrap items-center justify-between gap-3">
             <h1 className="sr-only">Calendar</h1>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="tm-calendar-controls flex flex-wrap items-center gap-2">
               <button onClick={setToday} className="tm-button tm-button-ghost tm-button-sm">
                 {copy.today}
               </button>
@@ -578,14 +578,14 @@ export function CalendarPage() {
             </div>
           </div>
 
-          <div className="tm-panel-soft p-3">
+          <div className="tm-panel-soft tm-calendar-header-panel p-3">
             <p className="tm-label">{headerLabel}</p>
           </div>
 
           {loading ? (
             <p className="text-amber-200/80">{copy.loading}</p>
           ) : view === 'day' ? (
-            <div className="space-y-3">
+            <div className="tm-calendar-day-view space-y-3">
               <CalendarTaskSection
                 title={copy.dayTasks}
                 tasks={sortTasksForCalendarDate(tasksForDate(selectedDate))}
@@ -601,37 +601,37 @@ export function CalendarPage() {
               />
             </div>
           ) : view === 'week' ? (
-            <div className="space-y-3">
+            <div className="tm-calendar-week-view space-y-3">
               {calendarDays.map((date) => {
                 const dayTasks = tasksForDate(date);
                 const isToday = isSameLocalDate(date, new Date());
                 return (
-                  <div key={date.toISOString()} className="tm-panel-soft p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
+                  <div key={date.toISOString()} className="tm-panel-soft tm-calendar-week-day p-3 space-y-2">
+                    <div className="tm-calendar-week-day-header flex items-center justify-between gap-2">
                       <button
                         type="button"
                         onClick={() => openDateDetails(date)}
-                        className={`text-sm text-left ${isToday ? 'tm-title' : 'tm-label'}`}
+                        className={`tm-calendar-week-date text-sm text-left ${isToday ? 'tm-title' : 'tm-label'}`}
                       >
                         {toDateLabel(date, locale, { day: '2-digit', month: 'short' })}
                       </button>
-                      <span className="text-xs text-amber-200/70">
+                      <span className="tm-calendar-weekday-label text-xs text-amber-200/70">
                         {copy.weekdayLabels[getWeekdayIndex(date)]}
                       </span>
                     </div>
                     {dayTasks.length === 0 ? (
-                      <p className="text-amber-200/70 text-sm">{copy.noTasks}</p>
+                      <p className="tm-calendar-week-empty text-amber-200/70 text-sm">{copy.noTasks}</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="tm-calendar-week-task-list space-y-2">
                         {dayTasks.map((task) => {
                           const rarityStyle = RARITY_STYLES[task.rarity] ?? RARITY_STYLES.common;
                           return (
                             <div
                               key={task.id}
-                              className={`tm-card ${rarityStyle.accent} border-l-4 ${rarityStyle.border} px-3 py-2`}
+                              className={`tm-card tm-calendar-week-task ${rarityStyle.accent} border-l-4 ${rarityStyle.border} px-3 py-2`}
                             >
-                              <p className="text-sm text-amber-50 break-words">{task.title}</p>
-                              <p className="text-xs text-amber-200/70">
+                              <p className="tm-calendar-week-task-title text-sm text-amber-50 break-words">{task.title}</p>
+                              <p className="tm-calendar-task-meta text-xs text-amber-200/70">
                                 {copy.periodicityLabels[task.periodicity]}
                               </p>
                             </div>
@@ -644,15 +644,15 @@ export function CalendarPage() {
               })}
             </div>
           ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-7 gap-1 sm:gap-2 text-xs text-amber-200/70">
+            <div className="tm-calendar-month-view space-y-3">
+              <div className="tm-calendar-weekdays grid grid-cols-7 gap-1 sm:gap-2 text-xs text-amber-200/70">
                 {copy.weekdayLabels.map((label) => (
-                  <div key={label} className="text-center">
+                  <div key={label} className="tm-calendar-weekday text-center">
                     {label}
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-1 sm:gap-2">
+              <div className="tm-calendar-month-grid grid grid-cols-7 gap-1 sm:gap-2">
                 {calendarDays.map((date) => {
                   const dayTasks = tasksForDate(date);
                   const isCurrentMonth = date.getMonth() === selectedDate.getMonth();
@@ -663,36 +663,36 @@ export function CalendarPage() {
                       key={date.toISOString()}
                       type="button"
                       onClick={() => openDateDetails(date)}
-                      className={`tm-panel-soft p-1.5 sm:p-2 text-left min-h-[72px] sm:min-h-[96px] flex flex-col gap-1 ${
+                      className={`tm-panel-soft tm-calendar-month-cell p-1.5 sm:p-2 text-left min-h-[72px] sm:min-h-[96px] flex flex-col gap-1 ${
                         isCurrentMonth ? '' : 'opacity-50'
                       } ${isToday ? 'border border-amber-400/60' : ''} ${
                         isSelected ? 'border border-amber-300' : ''
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-amber-200/80">
+                      <div className="tm-calendar-month-cell-header flex items-center justify-between gap-2">
+                        <span className="tm-calendar-date-number text-xs text-amber-200/80">
                           {date.getDate()}
                         </span>
                         {dayTasks.length > 0 ? (
-                          <span className="text-[10px] text-amber-200/70">
+                          <span className="tm-calendar-task-count text-[10px] text-amber-200/70">
                             {dayTasks.length}
                           </span>
                         ) : null}
                       </div>
-                      <div className="space-y-1">
+                      <div className="tm-calendar-month-preview-list space-y-1">
                         {dayTasks.slice(0, 3).map((task) => {
                           const rarityStyle = RARITY_STYLES[task.rarity] ?? RARITY_STYLES.common;
                           return (
                             <span
                               key={task.id}
-                              className={`block text-[10px] truncate ${rarityStyle.text}`}
+                              className={`tm-calendar-month-task-preview block text-[10px] truncate ${rarityStyle.text}`}
                             >
                               {task.title}
                             </span>
                           );
                         })}
                         {dayTasks.length > 3 ? (
-                          <span className="text-[10px] text-amber-200/70">
+                          <span className="tm-calendar-month-more text-[10px] text-amber-200/70">
                             {copy.more(dayTasks.length - 3)}
                           </span>
                         ) : null}
