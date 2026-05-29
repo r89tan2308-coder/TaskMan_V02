@@ -54,6 +54,7 @@ const CALENDAR_COPY = {
     today: 'Сегодня',
     previous: 'Назад',
     next: 'Вперёд',
+    viewAria: 'Режим календаря',
     viewLabels: {
       day: 'День',
       week: 'Неделя',
@@ -101,6 +102,7 @@ const CALENDAR_COPY = {
     today: 'Today',
     previous: 'Previous',
     next: 'Next',
+    viewAria: 'Calendar view',
     viewLabels: {
       day: 'Day',
       week: 'Week',
@@ -558,14 +560,16 @@ export function CalendarPage() {
               >
                 {copy.next}
               </button>
-              <div className="flex items-center gap-1">
+              <div className="tm-segmented-control" role="group" aria-label={copy.viewAria}>
                 {(['day', 'week', 'month'] as CalendarView[]).map((mode) => (
                   <button
                     key={mode}
+                    type="button"
                     onClick={() => setView(mode)}
-                    className={`tm-button tm-button-sm ${
-                      view === mode ? 'tm-button-primary' : 'tm-button-ghost'
+                    className={`tm-button tm-button-sm tm-segmented-item ${
+                      view === mode ? 'tm-button-primary is-selected' : 'tm-button-ghost'
                     }`}
+                    aria-pressed={view === mode}
                   >
                     {copy.viewLabels[mode]}
                   </button>

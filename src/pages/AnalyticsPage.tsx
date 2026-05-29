@@ -31,6 +31,7 @@ const ANALYTICS_COPY = {
       xp: 'XP',
       tasks: 'Задачи'
     } satisfies Record<AnalyticsMetric, string>,
+    metricAria: 'Метрика аналитики',
     periods: {
       week: 'Неделя',
       month: 'Месяц',
@@ -60,6 +61,7 @@ const ANALYTICS_COPY = {
       xp: 'XP',
       tasks: 'Tasks'
     } satisfies Record<AnalyticsMetric, string>,
+    metricAria: 'Analytics metric',
     periods: {
       week: 'Week',
       month: 'Month',
@@ -479,20 +481,24 @@ export function AnalyticsPage() {
             <h1 className="sr-only">{copy.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-amber-200/80">{metricLabel}</p>
-              <div className="flex items-center gap-1">
+              <div className="tm-segmented-control" role="group" aria-label={copy.metricAria}>
                 <button
+                  type="button"
                   onClick={() => setMetric('xp')}
-                  className={`tm-button tm-button-sm ${
-                    metric === 'xp' ? 'tm-button-gold' : 'tm-button-ghost'
+                  className={`tm-button tm-button-sm tm-segmented-item ${
+                    metric === 'xp' ? 'tm-button-gold is-selected' : 'tm-button-ghost'
                   }`}
+                  aria-pressed={metric === 'xp'}
                 >
                   XP
                 </button>
                 <button
+                  type="button"
                   onClick={() => setMetric('tasks')}
-                  className={`tm-button tm-button-sm ${
-                    metric === 'tasks' ? 'tm-button-gold' : 'tm-button-ghost'
+                  className={`tm-button tm-button-sm tm-segmented-item ${
+                    metric === 'tasks' ? 'tm-button-gold is-selected' : 'tm-button-ghost'
                   }`}
+                  aria-pressed={metric === 'tasks'}
                 >
                   {copy.metricTitles.tasks}
                 </button>

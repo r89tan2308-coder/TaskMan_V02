@@ -49,15 +49,19 @@ export function ProgressPage({
               {copy.intro}
             </p>
           </div>
-          <div className="tm-progress-tabs" role="tablist" aria-label={copy.tabListAria}>
+          <div
+            className="tm-progress-tabs tm-segmented-control tm-segmented-control-nowrap"
+            role="tablist"
+            aria-label={copy.tabListAria}
+          >
             {(Object.keys(tabLabels) as ProgressTab[]).map((progressTab) => (
               <button
                 key={progressTab}
                 type="button"
                 role="tab"
                 aria-selected={tab === progressTab}
-                className={`tm-tab tm-tab-sm tm-progress-tab ${
-                  tab === progressTab ? 'tm-tab-active' : ''
+                className={`tm-tab tm-tab-sm tm-progress-tab tm-segmented-item ${
+                  tab === progressTab ? 'tm-tab-active is-selected' : ''
                 }`}
                 onClick={() => onTabChange(progressTab)}
               >

@@ -6380,6 +6380,69 @@
   }
 }
 
+.tm-segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.tm-segmented-control-nowrap {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tm-segmented-control-nowrap::-webkit-scrollbar {
+  display: none;
+}
+
+.tm-segmented-item {
+  min-width: 0;
+  touch-action: manipulation;
+}
+
+.tm-segmented-control-nowrap .tm-segmented-item {
+  flex: 0 0 auto;
+}
+
+.tm-segmented-item:hover:not(:disabled) {
+  border-color: var(--tm-focus-ring);
+}
+
+.tm-segmented-item:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(1.04);
+}
+
+.tm-segmented-item.is-selected,
+.tm-segmented-item[aria-selected='true'],
+.tm-segmented-item[aria-pressed='true'] {
+  border-color: var(--tm-focus-ring);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px var(--tm-focus-ring-soft),
+    0 0 14px var(--tm-focus-ring-soft),
+    0 5px 10px rgba(0, 0, 0, 0.34);
+}
+
+.tm-segmented-item:focus-visible {
+  outline: 2px solid var(--tm-focus-ring);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 4px var(--tm-focus-ring-soft),
+    0 5px 10px rgba(0, 0, 0, 0.34);
+}
+
+.tm-segmented-item:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
 /* Phase 1C: responsive / overflow sanity pass. Keep the existing visuals,
    but make narrow viewports safer with long labels and dense panels. */
 .tm-app {

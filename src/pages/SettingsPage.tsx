@@ -919,7 +919,7 @@ export function SettingsPage({
             {interfaceOpen ? (
               <div className="tm-panel-soft p-3 space-y-2">
                 <p className="text-xs text-amber-200/70">{copy.language}</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="tm-segmented-control" role="group" aria-label={copy.language}>
                   {(['ru', 'en'] as const).map((nextLocale) => (
                     <button
                       key={nextLocale}
@@ -927,8 +927,8 @@ export function SettingsPage({
                       onClick={() => {
                         void handleLocaleChange(nextLocale);
                       }}
-                      className={`tm-button ${
-                        locale === nextLocale ? 'tm-button-gold' : 'tm-button-ghost'
+                      className={`tm-button tm-segmented-item ${
+                        locale === nextLocale ? 'tm-button-gold is-selected' : 'tm-button-ghost'
                       }`}
                       aria-pressed={locale === nextLocale}
                     >
@@ -937,36 +937,44 @@ export function SettingsPage({
                   ))}
                 </div>
                 <p className="text-xs text-amber-200/70">{copy.style}</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="tm-segmented-control" role="group" aria-label={copy.style}>
                   <button
+                    type="button"
                     onClick={() => handleThemeChange('classic')}
-                    className={`tm-button ${
-                      interfaceTheme === 'classic' ? 'tm-button-gold' : 'tm-button-ghost'
+                    className={`tm-button tm-segmented-item ${
+                      interfaceTheme === 'classic' ? 'tm-button-gold is-selected' : 'tm-button-ghost'
                     }`}
+                    aria-pressed={interfaceTheme === 'classic'}
                   >
                     {copy.themeLabels.classic}
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleThemeChange('vault')}
-                    className={`tm-button ${
-                      interfaceTheme === 'vault' ? 'tm-button-gold' : 'tm-button-ghost'
+                    className={`tm-button tm-segmented-item ${
+                      interfaceTheme === 'vault' ? 'tm-button-gold is-selected' : 'tm-button-ghost'
                     }`}
+                    aria-pressed={interfaceTheme === 'vault'}
                   >
                     {copy.themeLabels.vault}
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleThemeChange('handwritten')}
-                    className={`tm-button ${
-                      interfaceTheme === 'handwritten' ? 'tm-button-gold' : 'tm-button-ghost'
+                    className={`tm-button tm-segmented-item ${
+                      interfaceTheme === 'handwritten' ? 'tm-button-gold is-selected' : 'tm-button-ghost'
                     }`}
+                    aria-pressed={interfaceTheme === 'handwritten'}
                   >
                     {copy.themeLabels.handwritten}
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleThemeChange('hud')}
-                    className={`tm-button ${
-                      interfaceTheme === 'hud' ? 'tm-button-gold' : 'tm-button-ghost'
+                    className={`tm-button tm-segmented-item ${
+                      interfaceTheme === 'hud' ? 'tm-button-gold is-selected' : 'tm-button-ghost'
                     }`}
+                    aria-pressed={interfaceTheme === 'hud'}
                   >
                     {copy.themeLabels.hud}
                   </button>
@@ -1006,20 +1014,22 @@ export function SettingsPage({
                   </label>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs text-amber-200/70">{copy.motion}</span>
-                    {(['full', 'reduced', 'static'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => void onPetMotionModeChange(mode)}
-                        className={`tm-button tm-button-sm ${
-                          petMotionMode === mode ? 'tm-button-gold' : 'tm-button-ghost'
-                        }`}
-                        disabled={!petEnabled}
-                        aria-pressed={petMotionMode === mode}
-                      >
-                        {copy.motionModes[mode]}
-                      </button>
-                    ))}
+                    <div className="tm-segmented-control" role="group" aria-label={copy.motion}>
+                      {(['full', 'reduced', 'static'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => void onPetMotionModeChange(mode)}
+                          className={`tm-button tm-button-sm tm-segmented-item ${
+                            petMotionMode === mode ? 'tm-button-gold is-selected' : 'tm-button-ghost'
+                          }`}
+                          disabled={!petEnabled}
+                          aria-pressed={petMotionMode === mode}
+                        >
+                          {copy.motionModes[mode]}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       type="button"
                       onClick={() => void onPetPositionReset()}
