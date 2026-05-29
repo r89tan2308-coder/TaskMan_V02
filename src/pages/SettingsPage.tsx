@@ -91,9 +91,9 @@ const SETTINGS_COPY = {
     dataNote:
       'Задачи хранятся локально в текущем браузере и адресе приложения. Разные профили, localhost и 127.0.0.1 используют отдельные базы.',
     importExport: 'Импорт / экспорт',
-    transferSummary: 'Планирование и backup',
+    transferSummary: 'Планирование и резервная копия',
     transferTitle: 'Перенос и планирование',
-    transferDescription: 'Planning JSON для новых задач, backup JSON для полной копии базы.',
+    transferDescription: 'JSON-план для новых задач, резервная копия JSON для полной копии базы.',
     howToUse: 'Как пользоваться',
     planForAi: 'План для нейронки',
     aiPrompt: 'Промпт для нейронки',
@@ -103,18 +103,18 @@ const SETTINGS_COPY = {
     exportPlanDescription: 'Экспортирует задачи и проекты для внешнего планирования',
     importPlan: 'Загрузить план',
     importPlanDescription: 'Импортирует новые задачи и проекты из плана',
-    backup: 'Backup',
+    backup: 'Резервная копия',
     backupTitle: 'Резервная копия',
     backupDescription:
       'Полный экспорт и восстановление приложения. Импорт полностью заменяет локальные данные.',
-    downloadBackup: 'Скачать backup',
+    downloadBackup: 'Скачать резервную копию',
     downloadBackupDescription: 'Сохраняет полную копию локальных данных в JSON',
-    restoreBackup: 'Восстановить backup',
-    restoreBackupDescription: 'Полностью заменяет текущую локальную базу выбранным backup',
-    exportButton: 'Export',
-    exportLoading: 'Export...',
-    importButton: 'Import',
-    importLoading: 'Import...',
+    restoreBackup: 'Восстановить резервную копию',
+    restoreBackupDescription: 'Полностью заменяет текущую локальную базу выбранной резервной копией',
+    exportButton: 'Экспорт',
+    exportLoading: 'Экспорт...',
+    importButton: 'Импорт',
+    importLoading: 'Импорт...',
     backupExportLoading: 'Экспорт...',
     replaceConfirmMessage: 'Это полностью заменит локальные данные. Продолжить?',
     continue: 'Продолжить',
@@ -126,9 +126,11 @@ const SETTINGS_COPY = {
     reusedProjects: (count: number) => ` Совпавших проектов не дублировали: ${count}.`,
     skippedTasks: (count: number) => ` Пропущено похожих задач: ${count}.`,
     planImportSyntaxError: 'Файл плана повреждён или имеет неверный формат.',
+    planImportValidationError:
+      'Файл плана не прошёл проверку. Проверь структуру JSON и обязательные поля.',
     planImportFallbackError: 'Не удалось загрузить план.',
-    backupImportSyntaxError: 'Файл backup повреждён или имеет неверный JSON-формат.',
-    backupImportFallbackError: 'Не удалось импортировать backup.',
+    backupImportSyntaxError: 'Файл резервной копии повреждён или имеет неверный JSON-формат.',
+    backupImportFallbackError: 'Не удалось импортировать резервную копию.',
     previewTitle: 'Предпросмотр импорта плана',
     metrics: {
       projects: (count: number) => `Проектов ${count}`,
@@ -151,14 +153,15 @@ const SETTINGS_COPY = {
     noDueDate: 'не задан',
     repeat: 'Повтор',
     chooseProjectFirst: 'Сначала выбери проект, чтобы импортировать эту задачу.',
+    duplicateWarning: 'Похоже, такая открытая задача уже есть.',
     importSelectedNote:
       'Импортируются только отмеченные элементы. Дубликаты и задачи со снятыми проектами не будут применены.',
     importSelected: 'Импортировать выбранное',
     planBucketLabels: {
-      today: 'Today',
-      next: 'Next',
-      backlog: 'Backlog',
-      inbox: 'Inbox'
+      today: 'Сегодня',
+      next: 'Далее',
+      backlog: 'Запас',
+      inbox: 'Входящие'
     },
     planPeriodicityLabels: {
       daily: 'ежедневно',
@@ -253,6 +256,8 @@ const SETTINGS_COPY = {
     reusedProjects: (count: number) => ` Matching projects were not duplicated: ${count}.`,
     skippedTasks: (count: number) => ` Similar tasks skipped: ${count}.`,
     planImportSyntaxError: 'The plan file is damaged or has an invalid format.',
+    planImportValidationError:
+      'The plan file did not pass validation. Check the JSON structure and required fields.',
     planImportFallbackError: 'Could not load the plan.',
     backupImportSyntaxError: 'The backup file is damaged or has invalid JSON.',
     backupImportFallbackError: 'Could not import the backup.',
@@ -278,6 +283,7 @@ const SETTINGS_COPY = {
     noDueDate: 'not set',
     repeat: 'Repeat',
     chooseProjectFirst: 'Select the project first to import this task.',
+    duplicateWarning: 'A similar open task already exists.',
     importSelectedNote:
       'Only checked items will be imported. Duplicates and tasks with unchecked projects will not be applied.',
     importSelected: 'Import selected',
@@ -314,7 +320,7 @@ const getPlanImportErrorText = (error: unknown, copy: SettingsCopy) => {
   if (error instanceof SyntaxError) {
     return copy.planImportSyntaxError;
   }
-  return error instanceof Error ? error.message : copy.planImportFallbackError;
+  return error instanceof Error ? copy.planImportValidationError : copy.planImportFallbackError;
 };
 
 const getBackupImportErrorText = (error: unknown, copy: SettingsCopy) => {
@@ -1529,7 +1535,7 @@ export function SettingsPage({
                               <p className="text-xs text-amber-100/80 break-words">{notePreview}</p>
                             ) : null}
                             {task.duplicateWarning ? (
-                              <p className="text-[11px] text-amber-200/68">{task.duplicateWarning}</p>
+                              <p className="text-[11px] text-amber-200/68">{copy.duplicateWarning}</p>
                             ) : null}
                             {projectUnavailable ? (
                               <p className="text-[11px] text-red-300/80">

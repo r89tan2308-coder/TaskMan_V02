@@ -2,12 +2,84 @@ import { useEffect, useMemo, useState } from 'react';
 import { listEvents } from '../db/repositories/ledgerRepo';
 import { LedgerEvent } from '../entities/ledger/types';
 import { Task } from '../entities/task/types';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 import { xpForTask } from '../logic/xp';
 import { listTasks } from '../services/tasksService';
 
 type AnalyticsMetric = 'xp' | 'tasks';
 type SeriesPoint = { date: Date; value: number };
 type PlotPoint = SeriesPoint & { safeValue: number; x: number; y: number };
+
+const pluralizeRu = (count: number, one: string, few: string, many: string) => {
+  const abs = Math.abs(count);
+  const mod10 = abs % 10;
+  const mod100 = abs % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+};
+
+const ANALYTICS_COPY = {
+  ru: {
+    title: 'Аналитика',
+    dateLocale: 'ru-RU',
+    metricLabels: {
+      xp: 'XP за день',
+      tasks: 'Задач за день'
+    } satisfies Record<AnalyticsMetric, string>,
+    metricTitles: {
+      xp: 'XP',
+      tasks: 'Задачи'
+    } satisfies Record<AnalyticsMetric, string>,
+    periods: {
+      week: 'Неделя',
+      month: 'Месяц',
+      quarter: 'Квартал',
+      year: 'Год'
+    },
+    chartAria: {
+      month: (metric: string) => `${metric} · месяц`,
+      quarter: (metric: string) => `${metric} · квартал`,
+      year: (metric: string) => `${metric} · год`
+    },
+    loading: 'Загружаем аналитику...',
+    topByValue: 'Топ по ценности',
+    topCount: (count: number) => `Топ ${count}`,
+    noTasks: 'Задач пока нет.',
+    taskCount: (count: number) =>
+      `${count} ${pluralizeRu(count, 'задача', 'задачи', 'задач')}`
+  },
+  en: {
+    title: 'Analytics',
+    dateLocale: 'en-US',
+    metricLabels: {
+      xp: 'XP per day',
+      tasks: 'Tasks per day'
+    } satisfies Record<AnalyticsMetric, string>,
+    metricTitles: {
+      xp: 'XP',
+      tasks: 'Tasks'
+    } satisfies Record<AnalyticsMetric, string>,
+    periods: {
+      week: 'Week',
+      month: 'Month',
+      quarter: 'Quarter',
+      year: 'Year'
+    },
+    chartAria: {
+      month: (metric: string) => `${metric} · month`,
+      quarter: (metric: string) => `${metric} · quarter`,
+      year: (metric: string) => `${metric} · year`
+    },
+    loading: 'Loading analytics...',
+    topByValue: 'Top by value',
+    topCount: (count: number) => `Top ${count}`,
+    noTasks: 'No tasks yet.',
+    taskCount: (count: number) => `${count} task${count === 1 ? '' : 's'}`
+  }
+} satisfies Record<AppLocale, unknown>;
+
+type AnalyticsCopy = (typeof ANALYTICS_COPY)[AppLocale];
 
 const pad2 = (value: number) => value.toString().padStart(2, '0');
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -186,36 +258,29 @@ const buildPlotPoints = (series: SeriesPoint[], axisMax: number): PlotPoint[] =>
   });
 };
 
-const formatWeekday = (date: Date) =>
-  date.toLocaleDateString('ru-RU', { weekday: 'short' });
+const formatWeekday = (date: Date, dateLocale: string) =>
+  date.toLocaleDateString(dateLocale, { weekday: 'short' });
 
 const formatMonthDay = (date: Date) => String(date.getDate());
 
 const formatTooltipDate = (date: Date) =>
   `${pad2(date.getDate())}.${pad2(date.getMonth() + 1)}`;
-const formatMonthLabel = (date: Date) =>
-  date.toLocaleDateString('ru-RU', { month: 'short' });
+const formatMonthLabel = (date: Date, dateLocale: string) =>
+  date.toLocaleDateString(dateLocale, { month: 'short' });
 const formatMonthTooltip = (date: Date) =>
   `${pad2(date.getMonth() + 1)}.${date.getFullYear()}`;
 
 const toSafeValue = (value: number) => (Number.isFinite(value) ? value : 0);
 
 const formatAxisValue = (value: number) => String(Math.round(value));
-const formatTaskCount = (value: number) => {
-  const rounded = Math.round(value);
-  const abs = Math.abs(rounded);
-  const mod10 = abs % 10;
-  const mod100 = abs % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${rounded} задача`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${rounded} задачи`;
-  return `${rounded} задач`;
-};
-const formatMetricValue = (value: number, metric: AnalyticsMetric) =>
-  metric === 'xp' ? `${formatAxisValue(value)} XP` : formatTaskCount(value);
-const formatMetricTotal = (value: number, metric: AnalyticsMetric) =>
-  metric === 'xp' ? `+${formatAxisValue(value)} XP` : formatTaskCount(value);
+const formatMetricValue = (value: number, metric: AnalyticsMetric, copy: AnalyticsCopy) =>
+  metric === 'xp' ? `${formatAxisValue(value)} XP` : copy.taskCount(Math.round(value));
+const formatMetricTotal = (value: number, metric: AnalyticsMetric, copy: AnalyticsCopy) =>
+  metric === 'xp' ? `+${formatAxisValue(value)} XP` : copy.taskCount(Math.round(value));
 
 export function AnalyticsPage() {
+  const { locale } = useLocale();
+  const copy = ANALYTICS_COPY[locale];
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<LedgerEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -403,15 +468,15 @@ export function AnalyticsPage() {
         .slice(0, 5),
     [tasks]
   );
-  const metricLabel = metric === 'xp' ? 'XP за день' : 'Задач за день';
-  const metricTitle = metric === 'xp' ? 'XP' : 'Задачи';
+  const metricLabel = copy.metricLabels[metric];
+  const metricTitle = copy.metricTitles[metric];
 
   return (
     <div className="min-h-screen tm-analytics-page">
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8 tm-analytics-container">
         <div className="tm-frame tm-reveal tm-analytics-frame space-y-6 p-3 sm:p-6">
           <div className="tm-analytics-toolbar flex flex-wrap items-center justify-between gap-3">
-            <h1 className="sr-only">Analytics</h1>
+            <h1 className="sr-only">{copy.title}</h1>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-amber-200/80">{metricLabel}</p>
               <div className="flex items-center gap-1">
@@ -429,22 +494,22 @@ export function AnalyticsPage() {
                     metric === 'tasks' ? 'tm-button-gold' : 'tm-button-ghost'
                   }`}
                 >
-                  Задачи
+                  {copy.metricTitles.tasks}
                 </button>
               </div>
             </div>
           </div>
 
           {loading ? (
-            <p className="text-amber-200/80">Loading analytics...</p>
+            <p className="text-amber-200/80">{copy.loading}</p>
           ) : (
             <>
               <section className="tm-analytics-grid grid gap-4 md:grid-cols-2">
                 <div className="tm-panel-soft tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="tm-label">Week</p>
+                    <p className="tm-label">{copy.periods.week}</p>
                     <p className="text-xs text-amber-200/80">
-                      {formatMetricTotal(weeklyTotal, metric)}
+                      {formatMetricTotal(weeklyTotal, metric, copy)}
                     </p>
                   </div>
                   <div className="tm-chart-with-axis">
@@ -464,8 +529,8 @@ export function AnalyticsPage() {
                         const value = toSafeValue(point.value);
                         const height = weeklyAxis.max ? (value / weeklyAxis.max) * 100 : 0;
                         const clampedHeight = Math.min(100, Math.max(0, height));
-                        const label = formatWeekday(point.date);
-                        const valueLabel = formatMetricValue(value, metric);
+                        const label = formatWeekday(point.date, copy.dateLocale);
+                        const valueLabel = formatMetricValue(value, metric, copy);
                         return (
                           <div
                             key={formatTooltipDate(point.date)}
@@ -487,9 +552,9 @@ export function AnalyticsPage() {
                 </div>
                 <div className="tm-panel-soft tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="tm-label">Month</p>
+                    <p className="tm-label">{copy.periods.month}</p>
                     <p className="text-xs text-amber-200/80">
-                      {formatMetricTotal(monthlyTotal, metric)}
+                      {formatMetricTotal(monthlyTotal, metric, copy)}
                     </p>
                   </div>
                   <div className="tm-chart-grid-layout">
@@ -498,7 +563,7 @@ export function AnalyticsPage() {
                         <span key={`month-axis-${tick}`}>{formatAxisValue(tick)}</span>
                       ))}
                     </div>
-                    <div className="tm-line-chart" aria-label={`${metricTitle} · месяц`}>
+                    <div className="tm-line-chart" aria-label={copy.chartAria.month(metricTitle)}>
                       <div className="tm-chart-grid" aria-hidden="true">
                         {monthlyAxis.ticks.map((tick) => (
                           <span key={`month-grid-${tick}`} className="tm-chart-grid-line" />
@@ -526,7 +591,7 @@ export function AnalyticsPage() {
                           />
                         ) : null}
                         {monthlyPlotPoints.map((point, index) => {
-                          const valueLabel = formatMetricValue(point.safeValue, metric);
+                          const valueLabel = formatMetricValue(point.safeValue, metric, copy);
                           return (
                             <g key={formatTooltipDate(point.date)}>
                               <circle
@@ -564,7 +629,7 @@ export function AnalyticsPage() {
                     {monthlyActivePoint ? (
                       <div className="tm-line-chart-selected" role="status" aria-live="polite">
                         <span>{formatTooltipDate(monthlyActivePoint.date)}</span>
-                        <strong>{formatMetricValue(monthlyActivePoint.safeValue, metric)}</strong>
+                        <strong>{formatMetricValue(monthlyActivePoint.safeValue, metric, copy)}</strong>
                       </div>
                     ) : null}
                     <div className="tm-line-chart-labels">
@@ -578,7 +643,8 @@ export function AnalyticsPage() {
                             className="tm-chart-label tm-line-chart-label"
                             title={`${formatTooltipDate(point.date)}: ${formatMetricValue(
                               value,
-                              metric
+                              metric,
+                              copy
                             )}`}
                           >
                             {showLabel ? label : ''}
@@ -592,9 +658,9 @@ export function AnalyticsPage() {
               <section className="tm-analytics-grid grid gap-4 md:grid-cols-2">
                 <div className="tm-panel-soft tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="tm-label">Quarter</p>
+                    <p className="tm-label">{copy.periods.quarter}</p>
                     <p className="text-xs text-amber-200/80">
-                      {formatMetricTotal(quarterTotal, metric)}
+                      {formatMetricTotal(quarterTotal, metric, copy)}
                     </p>
                   </div>
                   <div className="tm-chart-grid-layout">
@@ -603,7 +669,7 @@ export function AnalyticsPage() {
                         <span key={`quarter-axis-${tick}`}>{formatAxisValue(tick)}</span>
                       ))}
                     </div>
-                    <div className="tm-line-chart" aria-label={`${metricTitle} · квартал`}>
+                    <div className="tm-line-chart" aria-label={copy.chartAria.quarter(metricTitle)}>
                       <div className="tm-chart-grid" aria-hidden="true">
                         {quarterAxis.ticks.map((tick) => (
                           <span key={`quarter-grid-${tick}`} className="tm-chart-grid-line" />
@@ -631,7 +697,7 @@ export function AnalyticsPage() {
                           />
                         ) : null}
                         {quarterPlotPoints.map((point, index) => {
-                          const valueLabel = formatMetricValue(point.safeValue, metric);
+                          const valueLabel = formatMetricValue(point.safeValue, metric, copy);
                           return (
                             <g key={formatMonthTooltip(point.date)}>
                               <circle
@@ -669,7 +735,7 @@ export function AnalyticsPage() {
                     {quarterActivePoint ? (
                       <div className="tm-line-chart-selected" role="status" aria-live="polite">
                         <span>{formatMonthTooltip(quarterActivePoint.date)}</span>
-                        <strong>{formatMetricValue(quarterActivePoint.safeValue, metric)}</strong>
+                        <strong>{formatMetricValue(quarterActivePoint.safeValue, metric, copy)}</strong>
                       </div>
                     ) : null}
                     <div className="tm-line-chart-labels">
@@ -681,10 +747,11 @@ export function AnalyticsPage() {
                             className="tm-chart-label tm-line-chart-label"
                             title={`${formatMonthTooltip(point.date)}: ${formatMetricValue(
                               value,
-                              metric
+                              metric,
+                              copy
                             )}`}
                           >
-                            {formatMonthLabel(point.date)}
+                            {formatMonthLabel(point.date, copy.dateLocale)}
                           </span>
                         );
                       })}
@@ -693,9 +760,9 @@ export function AnalyticsPage() {
                 </div>
                 <div className="tm-panel-soft tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="tm-label">Year</p>
+                    <p className="tm-label">{copy.periods.year}</p>
                     <p className="text-xs text-amber-200/80">
-                      {formatMetricTotal(yearTotal, metric)}
+                      {formatMetricTotal(yearTotal, metric, copy)}
                     </p>
                   </div>
                   <div className="tm-chart-grid-layout">
@@ -704,7 +771,7 @@ export function AnalyticsPage() {
                         <span key={`year-axis-${tick}`}>{formatAxisValue(tick)}</span>
                       ))}
                     </div>
-                    <div className="tm-line-chart" aria-label={`${metricTitle} · год`}>
+                    <div className="tm-line-chart" aria-label={copy.chartAria.year(metricTitle)}>
                       <div className="tm-chart-grid" aria-hidden="true">
                         {yearAxis.ticks.map((tick) => (
                           <span key={`year-grid-${tick}`} className="tm-chart-grid-line" />
@@ -732,7 +799,7 @@ export function AnalyticsPage() {
                           />
                         ) : null}
                         {yearPlotPoints.map((point, index) => {
-                          const valueLabel = formatMetricValue(point.safeValue, metric);
+                          const valueLabel = formatMetricValue(point.safeValue, metric, copy);
                           return (
                             <g key={formatMonthTooltip(point.date)}>
                               <circle
@@ -770,7 +837,7 @@ export function AnalyticsPage() {
                     {yearActivePoint ? (
                       <div className="tm-line-chart-selected" role="status" aria-live="polite">
                         <span>{formatMonthTooltip(yearActivePoint.date)}</span>
-                        <strong>{formatMetricValue(yearActivePoint.safeValue, metric)}</strong>
+                        <strong>{formatMetricValue(yearActivePoint.safeValue, metric, copy)}</strong>
                       </div>
                     ) : null}
                     <div className="tm-line-chart-labels">
@@ -786,10 +853,11 @@ export function AnalyticsPage() {
                             className="tm-chart-label tm-line-chart-label"
                             title={`${formatMonthTooltip(point.date)}: ${formatMetricValue(
                               value,
-                              metric
+                              metric,
+                              copy
                             )}`}
                           >
-                            {showLabel ? formatMonthLabel(point.date) : ''}
+                            {showLabel ? formatMonthLabel(point.date, copy.dateLocale) : ''}
                           </span>
                         );
                       })}
@@ -800,13 +868,13 @@ export function AnalyticsPage() {
 
               <section className="tm-panel-soft tm-analytics-card space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="tm-label">Top by value</p>
+                  <p className="tm-label">{copy.topByValue}</p>
                   <p className="text-xs text-amber-200/80">
-                    {topTasks.length ? `Top ${topTasks.length}` : 'No tasks'}
+                    {topTasks.length ? copy.topCount(topTasks.length) : copy.noTasks}
                   </p>
                 </div>
                 {topTasks.length === 0 ? (
-                  <p className="text-amber-200/70 text-sm">No tasks.</p>
+                  <p className="text-amber-200/70 text-sm">{copy.noTasks}</p>
                 ) : (
                   <div className="space-y-2">
                     {topTasks.map(({ task, value }) => (

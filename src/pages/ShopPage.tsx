@@ -6,6 +6,7 @@ import { getAppMetaValue, setAppMetaValue } from '../db/repositories/appMetaRepo
 import { LedgerEvent } from '../entities/ledger/types';
 import { db } from '../db';
 import { showAppAlert, showAppConfirm } from '../components/AppDialog';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
 const generateId = (): string => {
   const uuid = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -19,7 +20,98 @@ const generateId = (): string => {
 
 const PINNED_REWARDS_META_KEY = 'pinnedRewards';
 
+const SHOP_COPY = {
+  ru: {
+    title: 'Магазин',
+    xpBalance: (xp: number) => `XP: ${xp}`,
+    newReward: 'Новая покупка',
+    namePlaceholder: 'Название',
+    costPlaceholder: 'Цена',
+    add: 'Добавить',
+    adding: 'Добавление...',
+    repeatable: 'Повторяемая',
+    oneTime: 'Одноразовая',
+    cooldownPlaceholder: 'Кулдаун (ч)',
+    loading: 'Загрузка магазина...',
+    empty: 'Наград пока нет. Добавь первую покупку, чтобы появилась цель для XP.',
+    cost: (cost: number) => `Цена: ${cost} XP`,
+    pinned: 'На главной',
+    xpProgress: (xp: number, cost: number) => `XP: ${xp} / ${cost}`,
+    cooldown: (hours: number) => `Кулдаун: ${hours} ч`,
+    save: 'Сохранить',
+    saving: 'Сохранение...',
+    cancel: 'Отмена',
+    buy: 'Купить',
+    buying: 'Покупка...',
+    edit: 'Изменить',
+    delete: 'Удалить',
+    deleting: 'Удаление...',
+    notEnoughXp: 'Недостаточно XP',
+    alreadyBought: 'Уже куплено',
+    cooldownRemaining: (value: string) => `Кулдаун: ${value}`,
+    homeSection: 'Главный экран',
+    pin: 'Показать на главной',
+    unpin: 'Убрать с главной',
+    deleteConfirm: (name: string) => `Удалить покупку "${name}"?`,
+    invalidReward: 'Введите название и цену.',
+    pinFailed: 'Не удалось закрепить награду.',
+    unpinFailed: 'Не удалось убрать награду.',
+    saveFailed: 'Не удалось сохранить покупку.',
+    addFailed: 'Не удалось добавить покупку.',
+    deleteFailed: 'Не удалось удалить покупку.',
+    cooldownUnits: {
+      hour: 'ч',
+      minute: 'м'
+    }
+  },
+  en: {
+    title: 'Shop',
+    xpBalance: (xp: number) => `XP: ${xp}`,
+    newReward: 'New reward',
+    namePlaceholder: 'Name',
+    costPlaceholder: 'Cost',
+    add: 'Add',
+    adding: 'Adding...',
+    repeatable: 'Repeatable',
+    oneTime: 'One-time',
+    cooldownPlaceholder: 'Cooldown (h)',
+    loading: 'Loading shop...',
+    empty: 'No rewards yet. Add the first one to create an XP goal.',
+    cost: (cost: number) => `Cost: ${cost} XP`,
+    pinned: 'On Today',
+    xpProgress: (xp: number, cost: number) => `XP: ${xp} / ${cost}`,
+    cooldown: (hours: number) => `Cooldown: ${hours} h`,
+    save: 'Save',
+    saving: 'Saving...',
+    cancel: 'Cancel',
+    buy: 'Buy',
+    buying: 'Buying...',
+    edit: 'Edit',
+    delete: 'Delete',
+    deleting: 'Deleting...',
+    notEnoughXp: 'Not enough XP',
+    alreadyBought: 'Already bought',
+    cooldownRemaining: (value: string) => `Cooldown: ${value}`,
+    homeSection: 'Today screen',
+    pin: 'Show on Today',
+    unpin: 'Remove from Today',
+    deleteConfirm: (name: string) => `Delete reward "${name}"?`,
+    invalidReward: 'Enter a name and cost.',
+    pinFailed: 'Could not pin the reward.',
+    unpinFailed: 'Could not unpin the reward.',
+    saveFailed: 'Could not save the reward.',
+    addFailed: 'Could not add the reward.',
+    deleteFailed: 'Could not delete the reward.',
+    cooldownUnits: {
+      hour: 'h',
+      minute: 'm'
+    }
+  }
+} satisfies Record<AppLocale, unknown>;
+
 export function ShopPage() {
+  const { locale } = useLocale();
+  const copy = SHOP_COPY[locale];
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [events, setEvents] = useState<LedgerEvent[]>([]);
   const [xp, setXp] = useState(0);
@@ -99,8 +191,8 @@ export function ShopPage() {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     const parts: string[] = [];
-    if (hours) parts.push(`${hours}ч`);
-    if (minutes) parts.push(`${minutes}м`);
+    if (hours) parts.push(`${hours}${copy.cooldownUnits.hour}`);
+    if (minutes) parts.push(`${minutes}${copy.cooldownUnits.minute}`);
     return parts.join(' ');
   };
 
@@ -138,7 +230,7 @@ export function ShopPage() {
     try {
       await updatePinnedRewards([...pinnedRewardIds, rewardId]);
     } catch (error) {
-      await showAppAlert('Не удалось закрепить награду.');
+      await showAppAlert(copy.pinFailed);
     }
   };
 
@@ -147,7 +239,7 @@ export function ShopPage() {
     try {
       await updatePinnedRewards(pinnedRewardIds.filter((id) => id !== rewardId));
     } catch (error) {
-      await showAppAlert('Не удалось убрать награду.');
+      await showAppAlert(copy.unpinFailed);
     }
   };
 
@@ -206,7 +298,7 @@ export function ShopPage() {
     const name = editName.trim();
     const cost = parseCost(editCost);
     if (!name || cost === null) {
-      await showAppAlert('Введите название и цену.');
+      await showAppAlert(copy.invalidReward);
       return;
     }
     const cooldownHours = parseCooldown(editCooldown, editRepeatable);
@@ -228,7 +320,7 @@ export function ShopPage() {
       setEditCooldown('');
       await load();
     } catch (error) {
-      await showAppAlert('Не удалось сохранить покупку.');
+      await showAppAlert(copy.saveFailed);
     } finally {
       setSavingId(null);
     }
@@ -239,7 +331,7 @@ export function ShopPage() {
     const name = newName.trim();
     const cost = parseCost(newCost);
     if (!name || cost === null) {
-      await showAppAlert('Введите название и цену.');
+      await showAppAlert(copy.invalidReward);
       return;
     }
     setAdding(true);
@@ -261,7 +353,7 @@ export function ShopPage() {
       setNewCooldown('');
       await load();
     } catch (error) {
-      await showAppAlert('Не удалось добавить покупку.');
+      await showAppAlert(copy.addFailed);
     } finally {
       setAdding(false);
     }
@@ -270,8 +362,8 @@ export function ShopPage() {
   const deleteReward = async (reward: Reward) => {
     if (deletingId) return;
     const confirmed = await showAppConfirm({
-      message: `Удалить покупку "${reward.name}"?`,
-      confirmLabel: 'Удалить',
+      message: copy.deleteConfirm(reward.name),
+      confirmLabel: copy.delete,
       tone: 'danger'
     });
     if (!confirmed) return;
@@ -286,7 +378,7 @@ export function ShopPage() {
       }
       await load();
     } catch (error) {
-      await showAppAlert('Не удалось удалить покупку.');
+      await showAppAlert(copy.deleteFailed);
     } finally {
       setDeletingId(null);
     }
@@ -298,18 +390,18 @@ export function ShopPage() {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-reveal space-y-4 p-3 sm:p-6">
-          <h1 className="sr-only">Shop</h1>
-          <p className="tm-label">XP: {xp}</p>
+          <h1 className="sr-only">{copy.title}</h1>
+          <p className="tm-label">{copy.xpBalance(xp)}</p>
 
           <div className="tm-panel-soft p-3 space-y-2">
-            <p className="tm-label">Новая покупка</p>
+            <p className="tm-label">{copy.newReward}</p>
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   value={newName}
                   onChange={(event) => setNewName(event.target.value)}
                   className="tm-input flex-1"
-                  placeholder="Название"
+                  placeholder={copy.namePlaceholder}
                 />
                 <input
                   type="number"
@@ -318,14 +410,14 @@ export function ShopPage() {
                   value={newCost}
                   onChange={(event) => setNewCost(event.target.value)}
                   className="tm-input w-32"
-                  placeholder="Цена"
+                  placeholder={copy.costPlaceholder}
                 />
                 <button
                   onClick={addReward}
                   disabled={adding}
                   className="tm-button tm-button-primary"
                 >
-                  {adding ? 'Добавление...' : 'Добавить'}
+                  {adding ? copy.adding : copy.add}
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -336,7 +428,7 @@ export function ShopPage() {
                     onChange={(event) => setRepeatableDraft(event.target.checked, 'new')}
                     className="h-4 w-4 accent-amber-500"
                   />
-                  Повторяемая
+                  {copy.repeatable}
                 </label>
                 <input
                   type="number"
@@ -345,7 +437,7 @@ export function ShopPage() {
                   value={newCooldown}
                   onChange={(event) => setNewCooldown(event.target.value)}
                   className="tm-input w-36"
-                  placeholder="Кулдаун (ч)"
+                  placeholder={copy.cooldownPlaceholder}
                   disabled={!newRepeatable}
                 />
               </div>
@@ -353,9 +445,9 @@ export function ShopPage() {
           </div>
 
           {loading ? (
-            <p className="text-amber-200/80">Loading...</p>
+            <p className="text-amber-200/80">{copy.loading}</p>
           ) : rewards.length === 0 ? (
-            <p className="text-amber-200/80">No rewards yet</p>
+            <p className="text-amber-200/80">{copy.empty}</p>
           ) : (
             <div className="space-y-3">
               {rewards.map((reward) => {
@@ -399,7 +491,7 @@ export function ShopPage() {
                             value={editName}
                             onChange={(event) => setEditName(event.target.value)}
                             className="tm-input"
-                            placeholder="Название"
+                            placeholder={copy.namePlaceholder}
                           />
                           <input
                             type="number"
@@ -408,7 +500,7 @@ export function ShopPage() {
                             value={editCost}
                             onChange={(event) => setEditCost(event.target.value)}
                             className="tm-input w-32"
-                            placeholder="Цена"
+                            placeholder={copy.costPlaceholder}
                           />
                           <div className="flex flex-wrap items-center gap-3">
                             <label className="flex items-center gap-2 text-sm tm-label">
@@ -420,7 +512,7 @@ export function ShopPage() {
                                 }
                                 className="h-4 w-4 accent-amber-500"
                               />
-                              Повторяемая
+                              {copy.repeatable}
                             </label>
                             <input
                               type="number"
@@ -429,7 +521,7 @@ export function ShopPage() {
                               value={editCooldown}
                               onChange={(event) => setEditCooldown(event.target.value)}
                               className="tm-input w-36"
-                              placeholder="Кулдаун (ч)"
+                              placeholder={copy.cooldownPlaceholder}
                               disabled={!editRepeatable}
                             />
                           </div>
@@ -446,8 +538,8 @@ export function ShopPage() {
                         >
                           <p className="text-amber-50 font-semibold">{reward.name}</p>
                           <p className="text-sm text-amber-200/80">
-                            Cost: {reward.cost} XP
-                            {isPinned ? ' · На главном' : ''}
+                            {copy.cost(reward.cost)}
+                            {isPinned ? ` · ${copy.pinned}` : ''}
                           </p>
                           <div className="space-y-1">
                             <div
@@ -464,13 +556,13 @@ export function ShopPage() {
                               <span className="tm-progress-value">{progressValue}%</span>
                             </div>
                             <p className="text-xs text-amber-200/70">
-                              XP: {xp} / {reward.cost}
+                              {copy.xpProgress(xp, reward.cost)}
                             </p>
                           </div>
                           <p className="text-xs text-amber-200/70">
-                            {isRepeatable ? 'Повторяемая' : 'Одноразовая'}
+                            {isRepeatable ? copy.repeatable : copy.oneTime}
                             {isRepeatable && reward.cooldownHours
-                              ? ` · Кулдаун: ${reward.cooldownHours} ч`
+                              ? ` · ${copy.cooldown(reward.cooldownHours)}`
                               : ''}
                           </p>
                         </button>
@@ -483,14 +575,14 @@ export function ShopPage() {
                             disabled={isSaving}
                             className="tm-button tm-button-primary"
                           >
-                            {isSaving ? 'Saving...' : 'Save'}
+                            {isSaving ? copy.saving : copy.save}
                           </button>
                           <button
                             onClick={cancelEdit}
                             className="tm-button tm-button-ghost"
                             disabled={isSaving}
                           >
-                            Cancel
+                            {copy.cancel}
                           </button>
                         </>
                       ) : (
@@ -500,30 +592,30 @@ export function ShopPage() {
                             disabled={disabled}
                             className={`tm-button ${disabled ? 'tm-button-ghost' : 'tm-button-primary'}`}
                           >
-                            {purchasing === reward.id ? 'Buying...' : 'Buy'}
+                            {purchasing === reward.id ? copy.buying : copy.buy}
                           </button>
                           <button
                             onClick={() => startEdit(reward)}
                             className="tm-button tm-button-ghost"
                           >
-                            Edit
+                            {copy.edit}
                           </button>
                           <button
                             onClick={() => deleteReward(reward)}
                             className="tm-button tm-button-danger"
                             disabled={isDeleting}
                           >
-                            {isDeleting ? 'Удаление...' : 'Удалить'}
+                            {isDeleting ? copy.deleting : copy.delete}
                           </button>
                           {xp < reward.cost && (
-                            <p className="text-xs text-amber-200/80">Недостаточно XP</p>
+                            <p className="text-xs text-amber-200/80">{copy.notEnoughXp}</p>
                           )}
                           {lockedByRepeatable && (
-                            <p className="text-xs text-amber-200/80">Уже куплено</p>
+                            <p className="text-xs text-amber-200/80">{copy.alreadyBought}</p>
                           )}
                           {onCooldown && (
                             <p className="text-xs text-amber-200/80">
-                              Кулдаун: {formatCooldown(cooldownRemaining)}
+                              {copy.cooldownRemaining(formatCooldown(cooldownRemaining))}
                             </p>
                           )}
                         </>
@@ -535,21 +627,21 @@ export function ShopPage() {
                       className={`tm-note-body ${isExpanded ? 'tm-note-body-open' : ''}`}
                     >
                       <div className="tm-note-body-inner pt-3 space-y-2">
-                        <p className="text-xs tm-label">Главный экран</p>
+                        <p className="text-xs tm-label">{copy.homeSection}</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             onClick={() => pinReward(reward.id)}
                             disabled={isPinned}
                             className="tm-button tm-button-ghost tm-button-sm"
                           >
-                            Поместить на главный экран
+                            {copy.pin}
                           </button>
                           <button
                             onClick={() => unpinReward(reward.id)}
                             disabled={!isPinned}
                             className="tm-button tm-button-ghost tm-button-sm"
                           >
-                            Убрать с главного экрана
+                            {copy.unpin}
                           </button>
                         </div>
                       </div>

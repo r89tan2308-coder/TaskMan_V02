@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { getAppMetaValue, setAppMetaValue } from '../db/repositories/appMetaRepo';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
 type WheelSegment = {
   id: string;
@@ -67,6 +68,109 @@ const WHEEL_COLORS = [
   '#d6b24b'
 ];
 
+const SKILLS_COPY = {
+  ru: {
+    eyebrow: 'TaskQuest',
+    title: 'Профиль навыков',
+    subtitle: 'Экран навыков и баланса',
+    meta: {
+      balance: 'Баланс',
+      areas: 'Сферы',
+      snapshots: 'Снимки'
+    },
+    wheelTitle: 'Колесо баланса',
+    editWheelAria: 'Редактировать колесо баланса',
+    characteristicsTitle: 'Характеристики',
+    skillsTitle: 'Навыки',
+    balanceIndexTitle: 'Индекс баланса',
+    historyTitle: 'История',
+    loading: 'Загрузка...',
+    noNotes: 'Без заметок',
+    weakest: (items: string) => `Слабые зоны: ${items}`,
+    noWeakest: 'Слабые зоны: нет данных',
+    takeSnapshot: 'Сделать снимок',
+    historyHint: 'Сохраняйте снимки, чтобы видеть прогресс.',
+    noSnapshots: 'Снимков пока нет. Сделай первый снимок, чтобы появился ориентир.',
+    index: 'Индекс',
+    weak: 'Слабые',
+    delete: 'Удалить',
+    close: 'Закрыть',
+    namePlaceholder: 'Название',
+    value: 'Значение',
+    goal: 'Цель',
+    note: 'Заметка',
+    notePlaceholder: 'Добавить заметку',
+    cancel: 'Отмена',
+    saving: 'Сохранение...',
+    save: 'Сохранить',
+    editWheelTitle: 'Редактировать колесо баланса',
+    segmentNamePlaceholder: 'Название сферы',
+    addSegment: '+ Добавить сферу',
+    editCharacteristicsTitle: 'Редактировать характеристики',
+    addCharacteristic: '+ Добавить характеристику',
+    editSkillsTitle: 'Редактировать навыки',
+    addSkill: '+ Добавить навык',
+    newSegment: 'Новая сфера',
+    newCharacteristic: 'Новая характеристика',
+    newSkill: 'Новый навык',
+    fallbackSegment: 'Сфера',
+    fallbackCharacteristic: 'Характеристика',
+    fallbackSkill: 'Навык',
+    dateLocale: 'ru-RU'
+  },
+  en: {
+    eyebrow: 'TaskQuest',
+    title: 'Skills profile',
+    subtitle: 'Skills and balance screen',
+    meta: {
+      balance: 'Balance',
+      areas: 'Areas',
+      snapshots: 'Snapshots'
+    },
+    wheelTitle: 'Balance wheel',
+    editWheelAria: 'Edit balance wheel',
+    characteristicsTitle: 'Characteristics',
+    skillsTitle: 'Skills',
+    balanceIndexTitle: 'Balance index',
+    historyTitle: 'History',
+    loading: 'Loading...',
+    noNotes: 'No notes',
+    weakest: (items: string) => `Weak zones: ${items}`,
+    noWeakest: 'Weak zones: no data',
+    takeSnapshot: 'Take snapshot',
+    historyHint: 'Save snapshots to track progress.',
+    noSnapshots: 'No snapshots yet. Take the first snapshot to create a baseline.',
+    index: 'Index',
+    weak: 'Weak',
+    delete: 'Delete',
+    close: 'Close',
+    namePlaceholder: 'Name',
+    value: 'Value',
+    goal: 'Goal',
+    note: 'Note',
+    notePlaceholder: 'Add note',
+    cancel: 'Cancel',
+    saving: 'Saving...',
+    save: 'Save',
+    editWheelTitle: 'Edit balance wheel',
+    segmentNamePlaceholder: 'Area name',
+    addSegment: '+ Add area',
+    editCharacteristicsTitle: 'Edit characteristics',
+    addCharacteristic: '+ Add characteristic',
+    editSkillsTitle: 'Edit skills',
+    addSkill: '+ Add skill',
+    newSegment: 'New area',
+    newCharacteristic: 'New characteristic',
+    newSkill: 'New skill',
+    fallbackSegment: 'Area',
+    fallbackCharacteristic: 'Characteristic',
+    fallbackSkill: 'Skill',
+    dateLocale: 'en-US'
+  }
+} satisfies Record<AppLocale, unknown>;
+
+type SkillsCopy = (typeof SKILLS_COPY)[AppLocale];
+
 const DEFAULT_SEGMENT_NAMES = [
   'Здоровье',
   'Работа',
@@ -76,6 +180,17 @@ const DEFAULT_SEGMENT_NAMES = [
   'Личностный рост',
   'Отдых',
   'Друзья, окружение'
+];
+
+const DEFAULT_SEGMENT_NAMES_EN = [
+  'Health',
+  'Work',
+  'Personal life',
+  'Finance',
+  'Creativity',
+  'Personal growth',
+  'Rest',
+  'Friends, community'
 ];
 
 const DEFAULT_CHARACTERISTICS = [
@@ -89,6 +204,17 @@ const DEFAULT_CHARACTERISTICS = [
   { name: 'Гибкость', value: 5 }
 ];
 
+const DEFAULT_CHARACTERISTICS_EN = [
+  { name: 'Endurance', value: 7 },
+  { name: 'Strength', value: 6 },
+  { name: 'Agility', value: 5 },
+  { name: 'Intelligence', value: 7 },
+  { name: 'Charisma', value: 6 },
+  { name: 'Willpower', value: 6 },
+  { name: 'Focus', value: 6 },
+  { name: 'Flexibility', value: 5 }
+];
+
 const DEFAULT_LIFE_SKILLS = [
   { name: 'Готовка', value: 68 },
   { name: 'Вождение', value: 54 },
@@ -100,6 +226,19 @@ const DEFAULT_LIFE_SKILLS = [
   { name: 'Первая помощь', value: 37 },
   { name: 'Публичные выступления', value: 40 },
   { name: 'Домашний ремонт', value: 45 }
+];
+
+const DEFAULT_LIFE_SKILLS_EN = [
+  { name: 'Cooking', value: 68 },
+  { name: 'Driving', value: 54 },
+  { name: 'Excel', value: 72 },
+  { name: 'Photoshop', value: 42 },
+  { name: 'Communication', value: 66 },
+  { name: 'Planning', value: 61 },
+  { name: 'Financial literacy', value: 58 },
+  { name: 'First aid', value: 37 },
+  { name: 'Public speaking', value: 40 },
+  { name: 'Home repair', value: 45 }
 ];
 
 const generateId = (): string => {
@@ -122,32 +261,36 @@ const clampValue = (value: number, maxValue: number) => {
   return Math.max(0, Math.min(maxValue, Math.round(safeValue)));
 };
 
-const buildDefaultSegments = () =>
-  DEFAULT_SEGMENT_NAMES.map((name) => ({
+const buildDefaultSegments = (locale: AppLocale = 'ru') =>
+  (locale === 'en' ? DEFAULT_SEGMENT_NAMES_EN : DEFAULT_SEGMENT_NAMES).map((name) => ({
     id: generateId(),
     name,
     score: DEFAULT_SCORE
   }));
 
-const buildDefaultCharacteristics = () =>
-  DEFAULT_CHARACTERISTICS.map((stat) => ({
+const buildDefaultCharacteristics = (locale: AppLocale = 'ru') =>
+  (locale === 'en' ? DEFAULT_CHARACTERISTICS_EN : DEFAULT_CHARACTERISTICS).map((stat) => ({
     id: generateId(),
     name: stat.name,
     value: clampValue(stat.value, MAX_CHARACTERISTIC)
   }));
 
-const buildDefaultSkills = () =>
-  DEFAULT_LIFE_SKILLS.map((skill) => ({
+const buildDefaultSkills = (locale: AppLocale = 'ru') =>
+  (locale === 'en' ? DEFAULT_LIFE_SKILLS_EN : DEFAULT_LIFE_SKILLS).map((skill) => ({
     id: generateId(),
     name: skill.name,
     value: clampValue(skill.value, MAX_SKILL)
   }));
 
-const normalizeSegments = (segments: WheelSegment[]) => {
-  if (!segments.length) return buildDefaultSegments();
+const normalizeSegments = (
+  segments: WheelSegment[],
+  fallbackLabel = 'Сфера',
+  locale: AppLocale = 'ru'
+) => {
+  if (!segments.length) return buildDefaultSegments(locale);
   return segments.map((segment, index) => ({
     id: segment.id || generateId(),
-    name: segment.name.trim() || `Сфера ${index + 1}`,
+    name: segment.name.trim() || `${fallbackLabel} ${index + 1}`,
     score: clampScore(segment.score ?? 0)
   }));
 };
@@ -186,10 +329,10 @@ const buildNotesMap = (items: { id: string }[], notes: Record<string, string>) =
   return next;
 };
 
-const formatSnapshotDate = (value: string) => {
+const formatSnapshotDate = (value: string, dateLocale: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('ru-RU', {
+  return date.toLocaleString(dateLocale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -260,6 +403,7 @@ const describeWedge = (
 function StatsEditorModal({
   open,
   title,
+  copy,
   items,
   maxValue,
   goals,
@@ -277,6 +421,7 @@ function StatsEditorModal({
 }: {
   open: boolean;
   title: string;
+  copy: SkillsCopy;
   items: StatItem[];
   maxValue: number;
   goals?: Record<string, number>;
@@ -332,7 +477,7 @@ function StatsEditorModal({
         <div className="flex items-center justify-between gap-3">
           <h2 id={titleId} className="text-xl font-semibold tm-title">{title}</h2>
           <button onClick={onClose} className="tm-button tm-button-ghost">
-            Закрыть
+            {copy.close}
           </button>
         </div>
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
@@ -348,18 +493,18 @@ function StatsEditorModal({
                     value={item.name}
                     onChange={(event) => onUpdate(item.id, { name: event.target.value })}
                     className="tm-input flex-1 min-w-[180px]"
-                    placeholder="Название"
+                    placeholder={copy.namePlaceholder}
                   />
                   <button
                     onClick={() => onRemove(item.id)}
                     className="tm-button tm-button-danger tm-button-sm"
                     disabled={items.length <= 1}
                   >
-                    Удалить
+                    {copy.delete}
                   </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-xs tm-screen-muted w-16">Значение</span>
+                  <span className="text-xs tm-screen-muted w-16">{copy.value}</span>
                   <input
                     type="range"
                     min={0}
@@ -380,7 +525,7 @@ function StatsEditorModal({
                 </div>
                 {showGoals ? (
                   <div className="flex flex-wrap items-center gap-3">
-                    <span className="text-xs tm-screen-muted w-16">Цель</span>
+                    <span className="text-xs tm-screen-muted w-16">{copy.goal}</span>
                     <input
                       type="range"
                       min={0}
@@ -402,13 +547,13 @@ function StatsEditorModal({
                 ) : null}
                 {showNotes ? (
                   <div className="space-y-2">
-                    <span className="text-xs tm-screen-muted">Заметка</span>
+                    <span className="text-xs tm-screen-muted">{copy.note}</span>
                     <textarea
                       value={noteValue}
                       onChange={(event) => onNoteChange?.(item.id, event.target.value)}
                       className="tm-input"
                       rows={2}
-                      placeholder="Добавить заметку"
+                      placeholder={copy.notePlaceholder}
                     />
                   </div>
                 ) : null}
@@ -426,14 +571,14 @@ function StatsEditorModal({
               className="tm-button tm-button-ghost"
               disabled={saving}
             >
-              Отмена
+              {copy.cancel}
             </button>
             <button
               onClick={onSave}
               className="tm-button tm-button-primary"
               disabled={saving}
             >
-              {saving ? 'Сохранение...' : 'Сохранить'}
+              {saving ? copy.saving : copy.save}
             </button>
           </div>
         </div>
@@ -443,6 +588,8 @@ function StatsEditorModal({
 }
 
 export function SkillsPage() {
+  const { locale } = useLocale();
+  const copy = SKILLS_COPY[locale];
   const [segments, setSegments] = useState<WheelSegment[]>([]);
   const [characteristics, setCharacteristics] = useState<StatItem[]>([]);
   const [skills, setSkills] = useState<StatItem[]>([]);
@@ -489,20 +636,20 @@ export function SkillsPage() {
         getAppMetaValue<SkillsSnapshotsState>(HISTORY_META_KEY)
       ]);
       const nextSegments = storedWheel?.segments?.length
-        ? normalizeSegments(storedWheel.segments)
-        : buildDefaultSegments();
-      const defaultCharacteristics = buildDefaultCharacteristics();
-      const defaultSkills = buildDefaultSkills();
+        ? normalizeSegments(storedWheel.segments, copy.fallbackSegment, locale)
+        : buildDefaultSegments(locale);
+      const defaultCharacteristics = buildDefaultCharacteristics(locale);
+      const defaultSkills = buildDefaultSkills(locale);
       const nextCharacteristics = storedStats?.characteristics
         ? normalizeStats(
             storedStats.characteristics,
             defaultCharacteristics,
             MAX_CHARACTERISTIC,
-            'Характеристика'
+            copy.fallbackCharacteristic
           )
         : defaultCharacteristics;
       const nextSkills = storedStats?.skills
-        ? normalizeStats(storedStats.skills, defaultSkills, MAX_SKILL, 'Навык')
+        ? normalizeStats(storedStats.skills, defaultSkills, MAX_SKILL, copy.fallbackSkill)
         : defaultSkills;
       setSegments(nextSegments);
       setCharacteristics(nextCharacteristics);
@@ -525,7 +672,7 @@ export function SkillsPage() {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [copy.fallbackCharacteristic, copy.fallbackSegment, copy.fallbackSkill, locale]);
 
   useEffect(() => {
     if (!editing || typeof document === 'undefined') return;
@@ -573,14 +720,14 @@ export function SkillsPage() {
 
   const openEditor = () => {
     if (loading) return;
-    const baseSegments = segments.length ? segments : buildDefaultSegments();
+      const baseSegments = segments.length ? segments : buildDefaultSegments(locale);
     setDraftSegments(baseSegments.map((segment) => ({ ...segment })));
     setEditing(true);
   };
 
   const openCharacteristicsEditor = () => {
     if (loading) return;
-    const baseItems = characteristics.length ? characteristics : buildDefaultCharacteristics();
+    const baseItems = characteristics.length ? characteristics : buildDefaultCharacteristics(locale);
     setDraftCharacteristics(baseItems.map((item) => ({ ...item })));
     setDraftGoalCharacteristics(buildGoalMap(baseItems, goals.characteristics, MAX_CHARACTERISTIC));
     setDraftNotesCharacteristics(buildNotesMap(baseItems, notes.characteristics));
@@ -589,7 +736,7 @@ export function SkillsPage() {
 
   const openSkillsEditor = () => {
     if (loading) return;
-    const baseItems = skills.length ? skills : buildDefaultSkills();
+    const baseItems = skills.length ? skills : buildDefaultSkills(locale);
     setDraftSkills(baseItems.map((item) => ({ ...item })));
     setDraftGoalSkills(buildGoalMap(baseItems, goals.skills, MAX_SKILL));
     setDraftNotesSkills(buildNotesMap(baseItems, notes.skills));
@@ -688,7 +835,7 @@ export function SkillsPage() {
   const addDraft = () => {
     setDraftSegments((prev) => [
       ...prev,
-      { id: generateId(), name: 'Новая сфера', score: DEFAULT_SCORE }
+      { id: generateId(), name: copy.newSegment, score: DEFAULT_SCORE }
     ]);
   };
 
@@ -696,7 +843,7 @@ export function SkillsPage() {
     const id = generateId();
     setDraftCharacteristics((prev) => [
       ...prev,
-      { id, name: 'Новая характеристика', value: DEFAULT_CHARACTERISTIC_VALUE }
+      { id, name: copy.newCharacteristic, value: DEFAULT_CHARACTERISTIC_VALUE }
     ]);
     setDraftGoalCharacteristics((prev) => ({
       ...prev,
@@ -708,7 +855,7 @@ export function SkillsPage() {
     const id = generateId();
     setDraftSkills((prev) => [
       ...prev,
-      { id, name: 'Новый навык', value: DEFAULT_SKILL_VALUE }
+      { id, name: copy.newSkill, value: DEFAULT_SKILL_VALUE }
     ]);
     setDraftGoalSkills((prev) => ({
       ...prev,
@@ -718,7 +865,7 @@ export function SkillsPage() {
 
   const saveDraft = async () => {
     setSaving(true);
-    const normalized = normalizeSegments(draftSegments);
+    const normalized = normalizeSegments(draftSegments, copy.fallbackSegment, locale);
     await setAppMetaValue(WHEEL_META_KEY, { segments: normalized });
     setSegments(normalized);
     setSaving(false);
@@ -729,15 +876,15 @@ export function SkillsPage() {
     setSaving(true);
     const normalizedCharacteristics = normalizeStats(
       draftCharacteristics,
-      buildDefaultCharacteristics(),
+      buildDefaultCharacteristics(locale),
       MAX_CHARACTERISTIC,
-      'Характеристика'
+      copy.fallbackCharacteristic
     );
     const normalizedSkills = normalizeStats(
       skills,
-      buildDefaultSkills(),
+      buildDefaultSkills(locale),
       MAX_SKILL,
-      'Навык'
+      copy.fallbackSkill
     );
     const nextGoals = {
       characteristics: buildGoalMap(
@@ -769,15 +916,15 @@ export function SkillsPage() {
     setSaving(true);
     const normalizedCharacteristics = normalizeStats(
       characteristics,
-      buildDefaultCharacteristics(),
+      buildDefaultCharacteristics(locale),
       MAX_CHARACTERISTIC,
-      'Характеристика'
+      copy.fallbackCharacteristic
     );
     const normalizedSkills = normalizeStats(
       draftSkills,
-      buildDefaultSkills(),
+      buildDefaultSkills(locale),
       MAX_SKILL,
-      'Навык'
+      copy.fallbackSkill
     );
     const nextGoals = {
       characteristics: buildGoalMap(characteristics, goals.characteristics, MAX_CHARACTERISTIC),
@@ -836,22 +983,22 @@ export function SkillsPage() {
         <div className="tm-frame tm-reveal tm-skills-frame space-y-4 p-1 sm:p-2">
           <header className="tm-skills-header">
             <div className="tm-skills-header-title">
-              <p className="tm-eyebrow">TaskQuest</p>
-              <h1 className="text-3xl font-semibold tm-title">Профиль навыков</h1>
-              <p className="tm-label tm-skills-subtitle">Экран навыков и баланса</p>
+              <p className="tm-eyebrow">{copy.eyebrow}</p>
+              <h1 className="text-3xl font-semibold tm-title">{copy.title}</h1>
+              <p className="tm-label tm-skills-subtitle">{copy.subtitle}</p>
             </div>
             <div className="tm-skills-header-controls">
               <div className="tm-screen tm-skills-meta">
                 <div className="tm-skills-meta-item">
-                  <span className="tm-skills-meta-label">Баланс</span>
+                  <span className="tm-skills-meta-label">{copy.meta.balance}</span>
                   <span className="tm-skills-meta-value">{balanceDisplay}</span>
                 </div>
                 <div className="tm-skills-meta-item">
-                  <span className="tm-skills-meta-label">Сферы</span>
+                  <span className="tm-skills-meta-label">{copy.meta.areas}</span>
                   <span className="tm-skills-meta-value">{segmentsDisplay}</span>
                 </div>
                 <div className="tm-skills-meta-item">
-                  <span className="tm-skills-meta-label">Снимки</span>
+                  <span className="tm-skills-meta-label">{copy.meta.snapshots}</span>
                   <span className="tm-skills-meta-value">{snapshotsDisplay}</span>
                 </div>
               </div>
@@ -861,7 +1008,7 @@ export function SkillsPage() {
           <div className="tm-skills-grid">
             <div className="tm-panel tm-reveal tm-reveal-delay-1 tm-skills-panel tm-skills-panel-center p-1 sm:p-2">
               <div className="tm-skills-panel-header">
-                <h2 className="text-lg font-semibold tm-title">Колесо баланса</h2>
+                <h2 className="text-lg font-semibold tm-title">{copy.wheelTitle}</h2>
               </div>
               <div className="tm-screen tm-wheel-screen">
                 <div
@@ -869,7 +1016,7 @@ export function SkillsPage() {
                   onClick={openEditor}
                   role="button"
                   tabIndex={0}
-                  aria-label="Редактировать колесо баланса"
+                  aria-label={copy.editWheelAria}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
@@ -878,7 +1025,7 @@ export function SkillsPage() {
                   }}
                 >
                   {loading ? (
-                    <p className="tm-screen-muted">Загрузка...</p>
+                    <p className="tm-screen-muted">{copy.loading}</p>
                   ) : (
                     <svg
                       viewBox={`0 0 ${wheelGeometry.size} ${wheelGeometry.size}`}
@@ -1044,11 +1191,11 @@ export function SkillsPage() {
             }}
           >
             <div className="tm-skills-panel-header">
-              <h2 className="text-lg font-semibold tm-title">Характеристики</h2>
+              <h2 className="text-lg font-semibold tm-title">{copy.characteristicsTitle}</h2>
             </div>
             <div className="tm-screen tm-skills-screen">
               {loading ? (
-                <p className="tm-screen-muted">Загрузка...</p>
+                <p className="tm-screen-muted">{copy.loading}</p>
               ) : (
                 <div className="tm-stat-list">
                   {characteristics.map((stat) => {
@@ -1088,7 +1235,7 @@ export function SkillsPage() {
                             className="tm-stat-note"
                             onClick={(event) => event.stopPropagation()}
                           >
-                            {note || 'Без заметок'}
+                            {note || copy.noNotes}
                           </div>
                         ) : null}
                       </div>
@@ -1112,11 +1259,11 @@ export function SkillsPage() {
             }}
           >
             <div className="tm-skills-panel-header">
-              <h2 className="text-lg font-semibold tm-title">Навыки</h2>
+              <h2 className="text-lg font-semibold tm-title">{copy.skillsTitle}</h2>
             </div>
             <div className="tm-screen tm-skills-screen">
               {loading ? (
-                <p className="tm-screen-muted">Загрузка...</p>
+                <p className="tm-screen-muted">{copy.loading}</p>
               ) : (
                 <div className="tm-stat-list">
                   {skills.map((skill) => {
@@ -1151,7 +1298,7 @@ export function SkillsPage() {
                             className="tm-stat-note"
                             onClick={(event) => event.stopPropagation()}
                           >
-                            {note || 'Без заметок'}
+                            {note || copy.noNotes}
                           </div>
                         ) : null}
                       </div>
@@ -1165,11 +1312,11 @@ export function SkillsPage() {
           <div className="tm-skills-secondary">
               <div className="tm-panel tm-reveal tm-skills-panel p-4">
                 <div className="tm-skills-panel-header">
-                  <h2 className="text-lg font-semibold tm-title">Индекс баланса</h2>
+                  <h2 className="text-lg font-semibold tm-title">{copy.balanceIndexTitle}</h2>
                 </div>
                 <div className="tm-screen tm-skills-screen">
                   {loading ? (
-                    <p className="tm-screen-muted">Загрузка...</p>
+                    <p className="tm-screen-muted">{copy.loading}</p>
                   ) : (
                     <div className="tm-balance-index">
                       <div className="tm-balance-score">
@@ -1183,8 +1330,8 @@ export function SkillsPage() {
                       </div>
                       <p className="tm-balance-meta">
                         {weakestLabels.length
-                          ? `Слабые зоны: ${weakestLabels.join(', ')}`
-                          : 'Слабые зоны: нет данных'}
+                          ? copy.weakest(weakestLabels.join(', '))
+                          : copy.noWeakest}
                       </p>
                     </div>
                   )}
@@ -1193,22 +1340,22 @@ export function SkillsPage() {
 
               <div className="tm-panel tm-reveal tm-skills-panel p-4">
                 <div className="tm-skills-panel-header tm-history-header">
-                  <h2 className="text-lg font-semibold tm-title">История</h2>
+                  <h2 className="text-lg font-semibold tm-title">{copy.historyTitle}</h2>
                   <button
                     onClick={takeSnapshot}
                     className="tm-button tm-button-gold tm-button-sm"
                   >
-                    Сделать снимок
+                    {copy.takeSnapshot}
                   </button>
                 </div>
                 <div className="tm-screen tm-skills-screen">
                   <p className="text-sm tm-screen-muted">
-                    Сохраняйте снимки, чтобы видеть прогресс.
+                    {copy.historyHint}
                   </p>
                   {loading ? (
-                    <p className="tm-screen-muted">Загрузка...</p>
+                    <p className="tm-screen-muted">{copy.loading}</p>
                   ) : snapshots.length === 0 ? (
-                    <p className="tm-screen-muted">Снимков пока нет.</p>
+                    <p className="tm-screen-muted">{copy.noSnapshots}</p>
                   ) : (
                     <div className="tm-history-list">
                       {snapshots.map((snapshot) => {
@@ -1220,18 +1367,18 @@ export function SkillsPage() {
                           <div key={snapshot.id} className="tm-history-row">
                             <div>
                               <p className="tm-history-date">
-                                {formatSnapshotDate(snapshot.createdAt)}
+                                {formatSnapshotDate(snapshot.createdAt, copy.dateLocale)}
                               </p>
                               <p className="tm-history-meta">
-                                Индекс: {average.toFixed(1)}/{MAX_SCORE}
-                                {weakest ? ` · Слабые: ${weakest}` : ''}
+                                {copy.index}: {average.toFixed(1)}/{MAX_SCORE}
+                                {weakest ? ` · ${copy.weak}: ${weakest}` : ''}
                               </p>
                             </div>
                             <button
                               onClick={() => deleteSnapshot(snapshot.id)}
                               className="tm-button tm-button-danger tm-button-sm"
                             >
-                              Удалить
+                              {copy.delete}
                             </button>
                           </div>
                         );
@@ -1253,9 +1400,9 @@ export function SkillsPage() {
             aria-labelledby={wheelEditorTitleId}
           >
             <div className="flex items-center justify-between gap-3">
-              <h2 id={wheelEditorTitleId} className="text-xl font-semibold tm-title">Редактировать колесо баланса</h2>
+              <h2 id={wheelEditorTitleId} className="text-xl font-semibold tm-title">{copy.editWheelTitle}</h2>
               <button onClick={closeEditor} className="tm-button tm-button-ghost">
-                Закрыть
+                {copy.close}
               </button>
             </div>
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
@@ -1268,14 +1415,14 @@ export function SkillsPage() {
                         updateDraft(segment.id, { name: event.target.value })
                       }
                       className="tm-input flex-1 min-w-[180px]"
-                      placeholder="Название сферы"
+                      placeholder={copy.segmentNamePlaceholder}
                     />
                     <button
                       onClick={() => removeDraft(segment.id)}
                       className="tm-button tm-button-danger tm-button-sm"
                       disabled={draftSegments.length <= 1}
                     >
-                      Удалить
+                      {copy.delete}
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
@@ -1306,7 +1453,7 @@ export function SkillsPage() {
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <button onClick={addDraft} className="tm-button tm-button-steel">
-                + Добавить сферу
+                {copy.addSegment}
               </button>
               <div className="flex items-center gap-2">
                 <button
@@ -1314,14 +1461,14 @@ export function SkillsPage() {
                   className="tm-button tm-button-ghost"
                   disabled={saving}
                 >
-                  Отмена
+                  {copy.cancel}
                 </button>
                 <button
                   onClick={saveDraft}
                   className="tm-button tm-button-primary"
                   disabled={saving}
                 >
-                  {saving ? 'Сохранение...' : 'Сохранить'}
+                  {saving ? copy.saving : copy.save}
                 </button>
               </div>
             </div>
@@ -1331,13 +1478,14 @@ export function SkillsPage() {
 
       <StatsEditorModal
         open={editingCharacteristics}
-        title="Редактировать характеристики"
+        title={copy.editCharacteristicsTitle}
+        copy={copy}
         items={draftCharacteristics}
         maxValue={MAX_CHARACTERISTIC}
         goals={draftGoalCharacteristics}
         maxGoal={MAX_CHARACTERISTIC}
         notes={draftNotesCharacteristics}
-        addLabel="+ Добавить характеристику"
+        addLabel={copy.addCharacteristic}
         onAdd={addCharacteristic}
         onRemove={removeDraftCharacteristic}
         onUpdate={updateDraftCharacteristics}
@@ -1350,13 +1498,14 @@ export function SkillsPage() {
 
       <StatsEditorModal
         open={editingSkills}
-        title="Редактировать навыки"
+        title={copy.editSkillsTitle}
+        copy={copy}
         items={draftSkills}
         maxValue={MAX_SKILL}
         goals={draftGoalSkills}
         maxGoal={MAX_SKILL}
         notes={draftNotesSkills}
-        addLabel="+ Добавить навык"
+        addLabel={copy.addSkill}
         onAdd={addSkill}
         onRemove={removeDraftSkill}
         onUpdate={updateDraftSkills}

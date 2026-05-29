@@ -1,14 +1,32 @@
 import { AnalyticsPage } from './AnalyticsPage';
 import { ShopPage } from './ShopPage';
 import { SkillsPage } from './SkillsPage';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
 export type ProgressTab = 'skills' | 'shop' | 'analytics';
 
-const PROGRESS_TAB_LABELS: Record<ProgressTab, string> = {
-  skills: 'Skills',
-  shop: 'Shop',
-  analytics: 'Analytics'
-};
+const PROGRESS_COPY = {
+  ru: {
+    title: 'Прогресс',
+    intro: 'Рост, награды и аналитика в одном разделе.',
+    tabListAria: 'Разделы прогресса',
+    tabs: {
+      skills: 'Навыки',
+      shop: 'Магазин',
+      analytics: 'Аналитика'
+    } satisfies Record<ProgressTab, string>
+  },
+  en: {
+    title: 'Progress',
+    intro: 'Growth, rewards, and analytics in one section.',
+    tabListAria: 'Progress sections',
+    tabs: {
+      skills: 'Skills',
+      shop: 'Shop',
+      analytics: 'Analytics'
+    } satisfies Record<ProgressTab, string>
+  }
+} satisfies Record<AppLocale, unknown>;
 
 export function ProgressPage({
   tab,
@@ -17,18 +35,22 @@ export function ProgressPage({
   tab: ProgressTab;
   onTabChange: (tab: ProgressTab) => void;
 }) {
+  const { locale } = useLocale();
+  const copy = PROGRESS_COPY[locale];
+  const tabLabels = copy.tabs;
+
   return (
     <>
       <div className="max-w-5xl mx-auto px-2 sm:px-4 pt-4 pb-0">
         <section className="tm-panel-soft tm-progress-subnav">
           <div className="tm-progress-subnav-copy">
-            <h1 className="sr-only">Progress</h1>
+            <h1 className="sr-only">{copy.title}</h1>
             <p className="text-xs text-amber-200/70">
-              Рост, награды и аналитика в одном разделе.
+              {copy.intro}
             </p>
           </div>
-          <div className="tm-progress-tabs" role="tablist" aria-label="Разделы progress">
-            {(Object.keys(PROGRESS_TAB_LABELS) as ProgressTab[]).map((progressTab) => (
+          <div className="tm-progress-tabs" role="tablist" aria-label={copy.tabListAria}>
+            {(Object.keys(tabLabels) as ProgressTab[]).map((progressTab) => (
               <button
                 key={progressTab}
                 type="button"
@@ -39,14 +61,14 @@ export function ProgressPage({
                 }`}
                 onClick={() => onTabChange(progressTab)}
               >
-                {PROGRESS_TAB_LABELS[progressTab]}
+                {tabLabels[progressTab]}
               </button>
             ))}
           </div>
         </section>
       </div>
 
-      <div role="tabpanel" aria-label={PROGRESS_TAB_LABELS[tab]}>
+      <div role="tabpanel" aria-label={tabLabels[tab]}>
         {tab === 'skills' ? <SkillsPage /> : null}
         {tab === 'shop' ? <ShopPage /> : null}
         {tab === 'analytics' ? <AnalyticsPage /> : null}
