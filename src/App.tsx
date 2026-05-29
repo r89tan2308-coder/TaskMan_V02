@@ -14,6 +14,12 @@ import { FEATURE_FLAGS } from './features/featureFlags';
 import { AppPet } from './features/pet/AppPet';
 import { emitPetEvent } from './features/pet/petEvents';
 import {
+  APP_LOCALE_META_KEY,
+  LocaleProvider,
+  isAppLocale,
+  type AppLocale
+} from './i18n/appLocale';
+import {
   getPetEnabled,
   getPetMotionMode,
   resetPetPosition,
@@ -29,6 +35,38 @@ type InterfaceTheme = 'classic' | 'vault' | 'handwritten' | 'hud';
 const INTERFACE_THEME_META_KEY = 'interfaceTheme';
 const HANDWRITTEN_BG_META_KEY = 'handwrittenBackground';
 const PROGRESS_TAB_META_KEY = 'progressTab';
+
+const APP_NAV_LABELS: Record<
+  AppLocale,
+  {
+    today: string;
+    settings: string;
+    progress: string;
+    projects: string;
+    calendar: string;
+    notes: string;
+    tetrisLoading: string;
+  }
+> = {
+  ru: {
+    today: 'Сегодня',
+    settings: 'Настройки',
+    progress: 'Прогресс',
+    projects: 'Проекты',
+    calendar: 'Календарь',
+    notes: 'Заметки',
+    tetrisLoading: 'Загружаем Tetris...'
+  },
+  en: {
+    today: 'Today',
+    settings: 'Settings',
+    progress: 'Progress',
+    projects: 'Projects',
+    calendar: 'Calendar',
+    notes: 'Notes',
+    tetrisLoading: 'Loading Tetris...'
+  }
+};
 
 const TetrisPage = lazy(async () => {
   const module = await import('./features/tetris/TetrisPage');
@@ -55,6 +93,7 @@ function App() {
     | 'tetris'
   >('today');
   const [progressTab, setProgressTab] = useState<ProgressTab>('analytics');
+  const [locale, setLocaleState] = useState<AppLocale>('ru');
   const [interfaceTheme, setInterfaceTheme] = useState<InterfaceTheme>('classic');
   const [handwrittenBackground, setHandwrittenBackground] = useState<string | null>(null);
   const [petEnabled, setPetEnabledState] = useState(true);
@@ -71,12 +110,14 @@ function App() {
         savedTheme,
         savedBackground,
         savedProgressTab,
+        savedLocale,
         savedPetEnabled,
         savedPetMotionMode
       ] = await Promise.all([
         getAppMetaValue<unknown>(INTERFACE_THEME_META_KEY),
         getAppMetaValue<unknown>(HANDWRITTEN_BG_META_KEY),
         getAppMetaValue<unknown>(PROGRESS_TAB_META_KEY),
+        getAppMetaValue<unknown>(APP_LOCALE_META_KEY),
         getPetEnabled(),
         getPetMotionMode()
       ]);
@@ -88,6 +129,9 @@ function App() {
       }
       if (isProgressTab(savedProgressTab)) {
         setProgressTab(savedProgressTab);
+      }
+      if (isAppLocale(savedLocale)) {
+        setLocaleState(savedLocale);
       }
       setPetEnabledState(savedPetEnabled);
       setPetMotionModeState(savedPetMotionMode);
@@ -214,6 +258,11 @@ function App() {
     await setAppMetaValue(INTERFACE_THEME_META_KEY, next);
   };
 
+  const handleLocaleChange = async (next: AppLocale) => {
+    setLocaleState(next);
+    await setAppMetaValue(APP_LOCALE_META_KEY, next);
+  };
+
   const handleHandwrittenBackgroundChange = async (next: string | null) => {
     const normalized = typeof next === 'string' && next.trim().length > 0 ? next : null;
     setHandwrittenBackground(normalized);
@@ -259,23 +308,34 @@ function App() {
             : 'none'
         } as CSSProperties)
       : undefined;
+  const navLabels = APP_NAV_LABELS[locale];
 
   return (
     <div
-      className={`tm-app ${route === 'today' ? 'tm-app-today' : ''} ${themeClassName}`}
+      className={`tm-app ${route === 'today' ? 'tm-app-today' : ''} ${
+        route === 'progress' ? 'tm-app-progress' : ''
+      } ${
+        route === 'progress' && progressTab === 'analytics'
+          ? 'tm-app-progress-analytics'
+          : ''
+      } ${themeClassName}`}
       style={handwrittenStyle}
     >
+      <LocaleProvider value={{ locale, setLocale: handleLocaleChange }}>
       <AppDialogProvider>
         <nav className="tm-nav tm-nav-compact">
           <div ref={navShellRef} className="tm-nav-shell" data-scroll-left="false" data-scroll-right="false">
             <div ref={navScrollRef} className="tm-nav-inner">
               <button
+                type="button"
                 className={`tm-tab ${route === 'today' ? 'tm-tab-active' : ''}`}
                 onClick={() => setRoute('today')}
+                aria-current={route === 'today' ? 'page' : undefined}
               >
-                Today
+                {navLabels.today}
               </button>
               <button
+                type="button"
                 className={`tm-tab ${
                   route === 'settings' ||
                   route === 'ledger' ||
@@ -286,32 +346,49 @@ function App() {
                     : ''
                 }`}
                 onClick={() => setRoute('settings')}
+                aria-current={
+                  route === 'settings' ||
+                  route === 'ledger' ||
+                  route === 'log' ||
+                  route === 'manual' ||
+                  route === 'tetris'
+                    ? 'page'
+                    : undefined
+                }
               >
-                Settings
+                {navLabels.settings}
               </button>
               <button
+                type="button"
                 className={`tm-tab ${route === 'progress' ? 'tm-tab-active' : ''}`}
                 onClick={() => setRoute('progress')}
+                aria-current={route === 'progress' ? 'page' : undefined}
               >
-                Progress
+                {navLabels.progress}
               </button>
               <button
+                type="button"
                 className={`tm-tab ${route === 'projects' ? 'tm-tab-active' : ''}`}
                 onClick={() => setRoute('projects')}
+                aria-current={route === 'projects' ? 'page' : undefined}
               >
-                Projects
+                {navLabels.projects}
               </button>
               <button
+                type="button"
                 className={`tm-tab ${route === 'calendar' ? 'tm-tab-active' : ''}`}
                 onClick={() => setRoute('calendar')}
+                aria-current={route === 'calendar' ? 'page' : undefined}
               >
-                Calendar
+                {navLabels.calendar}
               </button>
               <button
+                type="button"
                 className={`tm-tab ${route === 'notes' ? 'tm-tab-active' : ''}`}
                 onClick={() => setRoute('notes')}
+                aria-current={route === 'notes' ? 'page' : undefined}
               >
-                Notes
+                {navLabels.notes}
               </button>
             </div>
           </div>
@@ -322,8 +399,8 @@ function App() {
           <ProgressPage tab={progressTab} onTabChange={handleProgressTabChange} />
         )}
         {route === 'calendar' && <CalendarPage />}
-        {route === 'ledger' && <LedgerPage />}
-        {route === 'log' && <DailyLogPage />}
+        {route === 'ledger' && <LedgerPage onBack={() => setRoute('settings')} />}
+        {route === 'log' && <DailyLogPage onBack={() => setRoute('settings')} />}
         {route === 'notes' && <NotesPage />}
         {route === 'manual' && <ManualPage onBack={() => setRoute('settings')} />}
         {route === 'settings' && (
@@ -345,7 +422,9 @@ function App() {
           <Suspense
             fallback={
               <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
-                <div className="tm-frame p-4 text-sm text-amber-200/70">Загружаем Tetris...</div>
+                <div className="tm-frame p-4 text-sm text-amber-200/70">
+                  {navLabels.tetrisLoading}
+                </div>
               </div>
             }
           >
@@ -359,6 +438,7 @@ function App() {
           baseState="idle"
         />
       </AppDialogProvider>
+      </LocaleProvider>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { showAppAlert, showAppConfirm } from '../components/AppDialog';
 import { getAppMetaValue, setAppMetaValue } from '../db/repositories/appMetaRepo';
 import { Rarity } from '../entities/task/types';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
 type NoteEntry = {
   id: string;
@@ -24,11 +25,102 @@ const NOTES_META_KEY = 'notes';
 const NOTES_SORT_META_KEY = 'notesSortMode';
 const NOTES_BOOTSTRAP_VERSION_META_KEY = 'notesBootstrapVersion';
 const NOTES_BOOTSTRAP_VERSION = 2;
-const NOTE_SORTS: Array<{ value: NoteSort; label: string }> = [
-  { value: 'manual', label: 'Ручная' },
-  { value: 'rarity', label: 'По редкости' },
-  { value: 'createdAt', label: 'По времени создания' }
-];
+const NOTE_SORTS: NoteSort[] = ['manual', 'rarity', 'createdAt'];
+
+const NOTES_COPY = {
+  ru: {
+    sortButton: 'Сортировка',
+    sortLabel: 'Сортировка',
+    sortLabels: {
+      manual: 'Ручная',
+      rarity: 'По редкости',
+      createdAt: 'По времени создания'
+    } satisfies Record<NoteSort, string>,
+    addNote: '+ Новая заметка',
+    creating: 'Создание...',
+    loading: 'Загрузка...',
+    empty: 'Пока нет заметок.',
+    defaultSummary: 'Без описания',
+    emptyBody: 'Пустая заметка',
+    collapse: 'Свернуть',
+    open: 'Открыть',
+    untitled: 'Без названия',
+    dragHint: 'Перетащить, чтобы изменить порядок',
+    title: 'Название',
+    titlePlaceholder: 'Название заметки',
+    summary: 'Краткое описание',
+    summaryPlaceholder: 'Короткое описание',
+    rarity: 'Редкость',
+    rarityLabels: {
+      common: 'Обычная',
+      rare: 'Редкая',
+      epic: 'Эпическая',
+      legendary: 'Легендарная'
+    } satisfies Record<Rarity, string>,
+    text: 'Текст',
+    textPlaceholder: 'Полный текст заметки',
+    saving: 'Сохранение...',
+    save: 'Сохранить',
+    cancel: 'Отмена',
+    edit: 'Edit',
+    deleting: 'Удаление...',
+    delete: 'Удалить',
+    confirmDiscard: 'Сбросить изменения в текущей заметке?',
+    titleRequired: 'Введите название заметки.',
+    saveFailed: 'Не удалось сохранить заметку.',
+    createFailed: 'Не удалось создать заметку.',
+    deleteUntitled: 'без названия',
+    deleteConfirm: (title: string) => `Удалить заметку "${title}"?`,
+    deleteFailed: 'Не удалось удалить заметку.',
+    reorderFailed: 'Не удалось изменить порядок заметок.'
+  },
+  en: {
+    sortButton: 'Sort',
+    sortLabel: 'Sort Order',
+    sortLabels: {
+      manual: 'Manual',
+      rarity: 'By rarity',
+      createdAt: 'By creation time'
+    } satisfies Record<NoteSort, string>,
+    addNote: '+ New Note',
+    creating: 'Creating...',
+    loading: 'Loading...',
+    empty: 'No notes yet.',
+    defaultSummary: 'No description',
+    emptyBody: 'Empty note',
+    collapse: 'Collapse',
+    open: 'Open',
+    untitled: 'Untitled',
+    dragHint: 'Drag to reorder',
+    title: 'Title',
+    titlePlaceholder: 'Note title',
+    summary: 'Short Description',
+    summaryPlaceholder: 'Short description',
+    rarity: 'Rarity',
+    rarityLabels: {
+      common: 'Common',
+      rare: 'Rare',
+      epic: 'Epic',
+      legendary: 'Legendary'
+    } satisfies Record<Rarity, string>,
+    text: 'Text',
+    textPlaceholder: 'Full note text',
+    saving: 'Saving...',
+    save: 'Save',
+    cancel: 'Cancel',
+    edit: 'Edit',
+    deleting: 'Deleting...',
+    delete: 'Delete',
+    confirmDiscard: 'Discard changes in the current note?',
+    titleRequired: 'Enter a note title.',
+    saveFailed: 'Could not save the note.',
+    createFailed: 'Could not create the note.',
+    deleteUntitled: 'untitled',
+    deleteConfirm: (title: string) => `Delete note "${title}"?`,
+    deleteFailed: 'Could not delete the note.',
+    reorderFailed: 'Could not reorder notes.'
+  }
+} satisfies Record<AppLocale, unknown>;
 
 const LEGACY_NOTES_BOOTSTRAP_SEEDS: Array<Pick<NoteEntry, 'title' | 'summary' | 'body' | 'rarity'>> = [
   {
@@ -46,6 +138,16 @@ const NOTES_BOOTSTRAP_SEEDS: Array<Pick<NoteEntry, 'title' | 'summary' | 'body' 
     summary: 'Текущий список продуктовых идей и ближайших улучшений TaskMan.',
     body:
       'Что уже имеет смысл держать в фокусе по приложению:\n\n- Inbox идей: один входящий список идей и проблем по приложению, без немедленной реализации, чтобы потом спокойно разбирать и раскладывать по bucket.\n- Today как execution-first экран: Overdue выше Today, очереди Today / Inbox / Next / Backlog внутри одного экрана, компактный Next preview и вторичная contextual pane на широких экранах.\n- Автологика задач: daily и due today автоматически всплывают в Today; recurring weekly / monthly / yearly тоже поднимаются в Today в день текущего дедлайна; bucket остается home queue и не переписывается автоматически.\n- Next layer: позже можно добавить автоподнятие задач с близким дедлайном в Next как временный слой поверх bucket.\n- Карточки задач: сохранять компактные action buttons, не перегружать карточку CTA и продолжать улучшать wide-grid раскладку.\n- История выполнения: держать под рукой блок Сделано ранее и удобную отмену прошлых выполнений без возврата к длинной простыне completed-задач.\n- Streak: ежедневный стрик уже логичен для daily-задач; следующим шагом можно продумать weekly streak и правила его расчета.\n- Theme polish: handwritten theme нужно держать консистентной для popup/menu/modal и не плодить дублирующиеся override в разных CSS-слоях.\n- Notes как product inbox: использовать Notes как место для продуктовых идей, а позже можно подумать о связке заметок с задачами или проектами.',
+    rarity: 'rare'
+  }
+];
+
+const NOTES_BOOTSTRAP_SEEDS_EN: Array<Pick<NoteEntry, 'title' | 'summary' | 'body' | 'rarity'>> = [
+  {
+    title: 'App ideas inbox',
+    summary: 'Current product ideas and near-term TaskMan improvements.',
+    body:
+      'Items worth keeping in focus:\n\n- Product idea inbox: one backlog for app ideas and problems before turning them into tasks.\n- Today as an execution-first screen: overdue tasks above today, Today / Inbox / Next / Backlog queues in one place, compact Next preview, and a secondary context pane on wide screens.\n- Task automation: daily and due-today tasks surface in Today automatically; recurring weekly / monthly / yearly tasks surface on their current due date while the bucket remains the home queue.\n- Next layer: later, tasks with close deadlines can temporarily surface in Next without changing their bucket.\n- Task cards: keep compact actions and continue improving the wide layout.\n- Completion history: keep earlier done items and undo actions easy to reach without a long completed-task feed.\n- Streaks: daily streaks make sense for daily tasks; weekly streak rules can come later.\n- Theme polish: keep the handwritten theme consistent across popups, menus, and modals.\n- Notes as product inbox: use Notes for product ideas, with possible links to tasks or projects later.',
     rarity: 'rare'
   }
 ];
@@ -114,7 +216,24 @@ const noteMatchesSeed = (
 ) =>
   note.title.trim() === seed.title.trim() && note.body.trim() === seed.body.trim();
 
+const getLocalizedNoteDisplay = (note: NoteEntry, locale: AppLocale): NoteEntry => {
+  if (locale === 'ru') return note;
+  const seedIndex = NOTES_BOOTSTRAP_SEEDS.findIndex((seed) => noteMatchesSeed(note, seed));
+  if (seedIndex >= 0) {
+    return { ...note, ...NOTES_BOOTSTRAP_SEEDS_EN[seedIndex] };
+  }
+  const legacySeedIndex = LEGACY_NOTES_BOOTSTRAP_SEEDS.findIndex((seed) =>
+    noteMatchesSeed(note, seed)
+  );
+  if (legacySeedIndex >= 0) {
+    return { ...note, ...NOTES_BOOTSTRAP_SEEDS_EN[legacySeedIndex] };
+  }
+  return note;
+};
+
 export function NotesPage() {
+  const { locale } = useLocale();
+  const copy = NOTES_COPY[locale];
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -264,7 +383,7 @@ export function NotesPage() {
   const toggleExpanded = async (noteId: string) => {
     if (editingId === noteId) return;
     if (editingId && editingId !== noteId) {
-      const confirmed = await showAppConfirm('Сбросить изменения в текущей заметке?');
+      const confirmed = await showAppConfirm(copy.confirmDiscard);
       if (!confirmed) return;
       resetDraft();
     }
@@ -273,14 +392,15 @@ export function NotesPage() {
 
   const startEdit = async (note: NoteEntry) => {
     if (editingId && editingId !== note.id) {
-      const confirmed = await showAppConfirm('Сбросить изменения в текущей заметке?');
+      const confirmed = await showAppConfirm(copy.confirmDiscard);
       if (!confirmed) return;
     }
+    const displayNote = getLocalizedNoteDisplay(note, locale);
     setEditingId(note.id);
-    setDraftTitle(note.title ?? '');
-    setDraftSummary(note.summary ?? '');
-    setDraftBody(note.body ?? '');
-    setDraftRarity(note.rarity ?? 'common');
+    setDraftTitle(displayNote.title ?? '');
+    setDraftSummary(displayNote.summary ?? '');
+    setDraftBody(displayNote.body ?? '');
+    setDraftRarity(displayNote.rarity ?? 'common');
     setExpandedId(note.id);
   };
 
@@ -292,7 +412,7 @@ export function NotesPage() {
     if (savingId) return;
     const title = draftTitle.trim();
     if (!title) {
-      await showAppAlert('Введите название заметки.');
+      await showAppAlert(copy.titleRequired);
       return;
     }
     const summary = draftSummary.trim();
@@ -311,7 +431,7 @@ export function NotesPage() {
       await persistNotes(nextNotes);
       resetDraft();
     } catch (error) {
-      await showAppAlert('Не удалось сохранить заметку.');
+      await showAppAlert(copy.saveFailed);
       await load();
     } finally {
       setSavingId(null);
@@ -337,7 +457,7 @@ export function NotesPage() {
       await persistNotes(nextNotes);
       await startEdit(note);
     } catch (error) {
-      await showAppAlert('Не удалось создать заметку.');
+      await showAppAlert(copy.createFailed);
     } finally {
       setAdding(false);
     }
@@ -345,10 +465,11 @@ export function NotesPage() {
 
   const deleteNote = async (note: NoteEntry) => {
     if (deletingId) return;
-    const noteTitle = note.title.trim() || 'без названия';
+    const displayNote = getLocalizedNoteDisplay(note, locale);
+    const noteTitle = displayNote.title.trim() || copy.deleteUntitled;
     const confirmed = await showAppConfirm({
-      message: `Удалить заметку "${noteTitle}"?`,
-      confirmLabel: 'Удалить',
+      message: copy.deleteConfirm(noteTitle),
+      confirmLabel: copy.delete,
       tone: 'danger'
     });
     if (!confirmed) return;
@@ -359,7 +480,7 @@ export function NotesPage() {
       if (expandedId === note.id) setExpandedId(null);
       if (editingId === note.id) resetDraft();
     } catch (error) {
-      await showAppAlert('Не удалось удалить заметку.');
+      await showAppAlert(copy.deleteFailed);
       await load();
     } finally {
       setDeletingId(null);
@@ -390,7 +511,7 @@ export function NotesPage() {
     try {
       await persistNotes(reorderedWithSort);
     } catch (error) {
-      await showAppAlert('Не удалось изменить порядок заметок.');
+      await showAppAlert(copy.reorderFailed);
       await load();
     }
   };
@@ -439,12 +560,12 @@ export function NotesPage() {
                   aria-haspopup="true"
                   aria-expanded={sortOpen}
                 >
-                  Sort
+                  {copy.sortButton}
                 </button>
                 {sortOpen ? (
                   <div className="absolute right-0 top-full mt-2 tm-panel p-3 z-20 w-64 space-y-2">
                     <label htmlFor="notes-sort" className="text-xs tm-label">
-                      Сортировка
+                      {copy.sortLabel}
                     </label>
                     <select
                       id="notes-sort"
@@ -453,8 +574,8 @@ export function NotesPage() {
                       className="tm-select text-sm"
                     >
                       {NOTE_SORTS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
+                        <option key={option} value={option}>
+                          {copy.sortLabels[option]}
                         </option>
                       ))}
                     </select>
@@ -466,24 +587,25 @@ export function NotesPage() {
                 className="tm-button tm-button-primary"
                 disabled={adding}
               >
-                {adding ? 'Создание...' : '+ Новая заметка'}
+                {adding ? copy.creating : copy.addNote}
               </button>
             </div>
           </div>
 
           {loading ? (
-            <p className="text-amber-200/80">Загрузка...</p>
+            <p className="text-amber-200/80">{copy.loading}</p>
           ) : sortedNotes.length === 0 ? (
-            <p className="text-amber-200/80">Пока нет заметок.</p>
+            <p className="text-amber-200/80">{copy.empty}</p>
           ) : (
             <div className="space-y-3">
               {sortedNotes.map((note) => {
+                const displayNote = getLocalizedNoteDisplay(note, locale);
                 const isExpanded = expandedId === note.id;
                 const isEditing = editingId === note.id;
                 const isSaving = savingId === note.id;
                 const isDeleting = deletingId === note.id;
-                const summaryText = note.summary?.trim() || 'Без описания';
-                const bodyText = note.body?.trim() || 'Пустая заметка';
+                const summaryText = displayNote.summary?.trim() || copy.defaultSummary;
+                const bodyText = displayNote.body?.trim() || copy.emptyBody;
                 const rarityStyle = RARITY_STYLES[note.rarity ?? 'common'];
                 const dragEnabled = canReorder && !isEditing && !isSaving && !isDeleting;
                 const dragging = draggingNoteId === note.id;
@@ -514,8 +636,8 @@ export function NotesPage() {
                         tabIndex={0}
                         aria-expanded={isExpanded}
                         aria-controls={`note-body-${note.id}`}
-                        aria-label={`${isExpanded ? 'Свернуть' : 'Открыть'} заметку ${
-                          note.title || 'Без названия'
+                        aria-label={`${isExpanded ? copy.collapse : copy.open} ${
+                          displayNote.title || copy.untitled
                         }`}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
@@ -523,16 +645,16 @@ export function NotesPage() {
                             handleToggle();
                           }
                         }}
-                        title={dragEnabled ? 'Drag to reorder' : undefined}
+                        title={dragEnabled ? copy.dragHint : undefined}
                       >
                         <p className="tm-note-title break-words">
-                          {note.title || 'Без названия'}
+                          {displayNote.title || copy.untitled}
                         </p>
                         <p className="text-sm text-amber-200/80 break-words">
                           {summaryText}
                         </p>
                         <p className="text-xs text-amber-200/80">
-                          <span className={rarityStyle.text}>{note.rarity}</span>
+                          <span className={rarityStyle.text}>{copy.rarityLabels[note.rarity ?? 'common']}</span>
                         </p>
                       </div>
                     </div>
@@ -545,29 +667,29 @@ export function NotesPage() {
                           <div className="space-y-3">
                             <div>
                               <label className="block text-xs tm-label mb-1">
-                                Название
+                                {copy.title}
                               </label>
                               <input
                                 value={draftTitle}
                                 onChange={(event) => setDraftTitle(event.target.value)}
                                 className="tm-input"
-                                placeholder="Название заметки"
+                                placeholder={copy.titlePlaceholder}
                               />
                             </div>
                             <div>
                               <label className="block text-xs tm-label mb-1">
-                                Краткое описание
+                                {copy.summary}
                               </label>
                               <input
                                 value={draftSummary}
                                 onChange={(event) => setDraftSummary(event.target.value)}
                                 className="tm-input"
-                                placeholder="Короткое описание"
+                                placeholder={copy.summaryPlaceholder}
                               />
                             </div>
                             <div>
                               <label className="block text-xs tm-label mb-1">
-                                Редкость
+                                {copy.rarity}
                               </label>
                               <select
                                 value={draftRarity}
@@ -576,20 +698,20 @@ export function NotesPage() {
                                 }
                                 className="tm-select"
                               >
-                                <option value="common">Common</option>
-                                <option value="rare">Rare</option>
-                                <option value="epic">Epic</option>
-                                <option value="legendary">Legendary</option>
+                                <option value="common">{copy.rarityLabels.common}</option>
+                                <option value="rare">{copy.rarityLabels.rare}</option>
+                                <option value="epic">{copy.rarityLabels.epic}</option>
+                                <option value="legendary">{copy.rarityLabels.legendary}</option>
                               </select>
                             </div>
                             <div>
-                              <label className="block text-xs tm-label mb-1">Текст</label>
+                              <label className="block text-xs tm-label mb-1">{copy.text}</label>
                               <textarea
                                 value={draftBody}
                                 onChange={(event) => setDraftBody(event.target.value)}
                                 className="tm-input min-h-[120px]"
                                 rows={6}
-                                placeholder="Полный текст заметки"
+                                placeholder={copy.textPlaceholder}
                               />
                             </div>
                           </div>
@@ -604,14 +726,14 @@ export function NotesPage() {
                                 disabled={isSaving}
                                 className="tm-button tm-button-primary"
                               >
-                                {isSaving ? 'Сохранение...' : 'Сохранить'}
+                                {isSaving ? copy.saving : copy.save}
                               </button>
                               <button
                                 onClick={cancelEdit}
                                 disabled={isSaving}
                                 className="tm-button tm-button-ghost"
                               >
-                                Отмена
+                                {copy.cancel}
                               </button>
                             </>
                           ) : (
@@ -620,14 +742,14 @@ export function NotesPage() {
                                 onClick={() => startEdit(note)}
                                 className="tm-button tm-button-ghost"
                               >
-                                Edit
+                                {copy.edit}
                               </button>
                               <button
                                 onClick={() => deleteNote(note)}
                                 disabled={isDeleting}
                                 className="tm-button tm-button-danger"
                               >
-                                {isDeleting ? 'Удаление...' : 'Удалить'}
+                                {isDeleting ? copy.deleting : copy.delete}
                               </button>
                             </>
                           )}

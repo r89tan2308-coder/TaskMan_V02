@@ -4,8 +4,34 @@ import { LedgerEvent } from '../entities/ledger/types';
 import { Task } from '../entities/task/types';
 import { listTasks } from '../services/tasksService';
 import { showAppAlert, showAppConfirm } from '../components/AppDialog';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
-export function LedgerPage() {
+const LEDGER_COPY = {
+  ru: {
+    title: 'Журнал XP',
+    back: 'Назад в настройки',
+    loading: 'Загрузка...',
+    empty: 'Событий пока нет',
+    deleteConfirm: 'Удалить это событие из журнала?',
+    delete: 'Удалить',
+    deleting: 'Удаление...',
+    deleteFailed: 'Не удалось удалить событие.'
+  },
+  en: {
+    title: 'XP Ledger',
+    back: 'Back to Settings',
+    loading: 'Loading...',
+    empty: 'No events yet',
+    deleteConfirm: 'Delete this event from ledger?',
+    delete: 'Delete',
+    deleting: 'Deleting...',
+    deleteFailed: 'Failed to delete event.'
+  }
+} satisfies Record<AppLocale, unknown>;
+
+export function LedgerPage({ onBack }: { onBack: () => void }) {
+  const { locale } = useLocale();
+  const copy = LEDGER_COPY[locale];
   const [events, setEvents] = useState<LedgerEvent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,8 +56,8 @@ export function LedgerPage() {
   const handleDelete = async (event: LedgerEvent) => {
     if (event.kind !== 'task' && event.kind !== 'adjustment') return;
     const confirmed = await showAppConfirm({
-      message: 'Delete this event from ledger?',
-      confirmLabel: 'Delete',
+      message: copy.deleteConfirm,
+      confirmLabel: copy.delete,
       tone: 'danger'
     });
     if (!confirmed) return;
@@ -40,7 +66,7 @@ export function LedgerPage() {
       await deleteEvent(event.id);
       setEvents((prev) => prev.filter((item) => item.id !== event.id));
     } catch (error) {
-      await showAppAlert('Failed to delete event.');
+      await showAppAlert(copy.deleteFailed);
     } finally {
       setDeletingIds((prev) => prev.filter((id) => id !== event.id));
     }
@@ -54,12 +80,17 @@ export function LedgerPage() {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-reveal space-y-4 p-3 sm:p-6">
-          <h1 className="text-3xl font-semibold tm-title">Ledger</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-3xl font-semibold tm-title">{copy.title}</h1>
+            <button type="button" onClick={onBack} className="tm-button tm-button-steel">
+              {copy.back}
+            </button>
+          </div>
 
           {loading ? (
-            <p className="text-amber-200/80">Loading...</p>
+            <p className="text-amber-200/80">{copy.loading}</p>
           ) : sortedEvents.length === 0 ? (
-            <p className="text-amber-200/80">No events yet</p>
+            <p className="text-amber-200/80">{copy.empty}</p>
           ) : (
             <div className="space-y-3">
               {sortedEvents.map((event) => {
@@ -108,7 +139,7 @@ export function LedgerPage() {
                           disabled={isDeleting}
                           className="tm-button tm-button-danger tm-button-sm"
                         >
-                          {isDeleting ? 'Deleting...' : 'Delete'}
+                          {isDeleting ? copy.deleting : copy.delete}
                         </button>
                       ) : null}
                     </div>

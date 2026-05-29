@@ -407,10 +407,10 @@ export function AnalyticsPage() {
   const metricTitle = metric === 'xp' ? 'XP' : 'Задачи';
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
-        <div className="tm-frame tm-reveal space-y-6 p-3 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="min-h-screen tm-analytics-page">
+      <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8 tm-analytics-container">
+        <div className="tm-frame tm-reveal tm-analytics-frame space-y-6 p-3 sm:p-6">
+          <div className="tm-analytics-toolbar flex flex-wrap items-center justify-between gap-3">
             <h1 className="sr-only">Analytics</h1>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-amber-200/80">{metricLabel}</p>
@@ -439,8 +439,8 @@ export function AnalyticsPage() {
             <p className="text-amber-200/80">Loading analytics...</p>
           ) : (
             <>
-              <section className="grid gap-4 md:grid-cols-2">
-                <div className="tm-panel-soft p-4 space-y-3">
+              <section className="tm-analytics-grid grid gap-4 md:grid-cols-2">
+                <div className="tm-panel-soft tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="tm-label">Week</p>
                     <p className="text-xs text-amber-200/80">
@@ -485,7 +485,7 @@ export function AnalyticsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="tm-panel-soft p-4 space-y-3">
+                <div className="tm-panel-soft tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="tm-label">Month</p>
                     <p className="text-xs text-amber-200/80">
@@ -589,8 +589,8 @@ export function AnalyticsPage() {
                   </div>
                 </div>
               </section>
-              <section className="grid gap-4 md:grid-cols-2">
-                <div className="tm-panel-soft p-4 space-y-3">
+              <section className="tm-analytics-grid grid gap-4 md:grid-cols-2">
+                <div className="tm-panel-soft tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="tm-label">Quarter</p>
                     <p className="text-xs text-amber-200/80">
@@ -691,7 +691,7 @@ export function AnalyticsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="tm-panel-soft p-4 space-y-3">
+                <div className="tm-panel-soft tm-analytics-card space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="tm-label">Year</p>
                     <p className="text-xs text-amber-200/80">
@@ -798,7 +798,7 @@ export function AnalyticsPage() {
                 </div>
               </section>
 
-              <section className="tm-panel-soft p-4 space-y-3">
+              <section className="tm-panel-soft tm-analytics-card space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="tm-label">Top by value</p>
                   <p className="text-xs text-amber-200/80">

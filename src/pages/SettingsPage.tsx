@@ -6,7 +6,6 @@ import {
 } from '../db/repositories/exportImportRepo';
 import { addEvent } from '../db/repositories/ledgerRepo';
 import type { PlanImportPreview, PlanImportSelection } from '../entities/plan/types';
-import type { Periodicity, TaskBucket } from '../entities/task/types';
 import {
   applyPlanImportSelection,
   buildDefaultPlanImportSelection,
@@ -14,11 +13,14 @@ import {
   preparePlanImportPreview
 } from '../services/planTransferService';
 import {
-  BACKUP_GUIDE_ITEMS,
-  PLAN_IMPORT_GUIDE_ITEMS,
-  TASKMAN_PLAN_PROMPT
+  getImportExportGuide
 } from '../content/importExportGuide';
-import { reminderCopy } from '../i18n/reminders';
+import {
+  APP_LOCALE_LABELS,
+  useLocale,
+  type AppLocale
+} from '../i18n/appLocale';
+import { reminderTranslations } from '../i18n/reminders';
 import { getXpBalance } from '../services/xpService';
 import {
   getNotificationPermissionState,
@@ -37,20 +39,263 @@ import { requestPwaUpdate } from '../pwa';
 
 type InterfaceTheme = 'classic' | 'vault' | 'handwritten' | 'hud';
 
-const PLAN_BUCKET_LABELS: Record<TaskBucket, string> = {
-  today: 'Today',
-  next: 'Next',
-  backlog: 'Backlog',
-  inbox: 'Inbox'
-};
-
-const PLAN_PERIODICITY_LABELS: Record<Periodicity, string> = {
-  daily: 'ежедневно',
-  weekly: 'еженедельно',
-  'one-time': 'разовая',
-  monthly: 'ежемесячно',
-  yearly: 'ежегодно'
-};
+const SETTINGS_COPY = {
+  ru: {
+    sections: 'Разделы',
+    ledger: 'Журнал XP',
+    log: 'Дневник',
+    manual: 'Мануал',
+    tetris: 'Tetris',
+    interface: 'Интерфейс',
+    language: 'Язык',
+    style: 'Стиль',
+    themeLabels: {
+      classic: 'Classic',
+      vault: 'Retro',
+      handwritten: 'Рукописный',
+      hud: 'HUD'
+    },
+    handwrittenHint: 'Фон виден с прозрачностью 20%.',
+    removeBackground: 'Удалить фон',
+    failedReadBackground: 'Не удалось прочитать изображение фона.',
+    vexaCompanion: 'Vexa-компаньон',
+    motion: 'Движение',
+    motionModes: {
+      full: 'Полное',
+      reduced: 'Меньше',
+      static: 'Статика'
+    },
+    returnVexa: 'Вернуть Vexa',
+    hideVexa: 'Спрятать Vexa',
+    xp: 'XP',
+    editXpBalance: 'Изменить баланс XP',
+    currentBalance: (xp: number) => `Текущий баланс: ${xp} XP`,
+    xpBalance: 'Баланс XP',
+    invalidXp: 'Некорректное значение XP.',
+    failedUpdateXp: 'Не удалось обновить XP.',
+    cancel: 'Отмена',
+    save: 'Сохранить',
+    saving: 'Сохранение...',
+    app: 'Приложение',
+    updateApp: 'Обновить приложение',
+    updatingApp: 'Обновление...',
+    updateStatus: {
+      checking: 'Проверяем обновления...',
+      reloading: 'Обновление найдено. Перезагрузка...',
+      noUpdate: 'Обновлений нет.',
+      error: 'Не удалось обновить приложение.'
+    },
+    allowInBrowser: 'Разрешить в браузере',
+    checkNow: 'Проверить сейчас',
+    data: 'Данные',
+    dataNote:
+      'Задачи хранятся локально в текущем браузере и адресе приложения. Разные профили, localhost и 127.0.0.1 используют отдельные базы.',
+    importExport: 'Импорт / экспорт',
+    transferSummary: 'Планирование и backup',
+    transferTitle: 'Перенос и планирование',
+    transferDescription: 'Planning JSON для новых задач, backup JSON для полной копии базы.',
+    howToUse: 'Как пользоваться',
+    planForAi: 'План для нейронки',
+    aiPrompt: 'Промпт для нейронки',
+    planning: 'Планирование',
+    planningDescription: 'Экспортирует план наружу и импортирует новые задачи и проекты обратно.',
+    exportPlan: 'Выгрузить план',
+    exportPlanDescription: 'Экспортирует задачи и проекты для внешнего планирования',
+    importPlan: 'Загрузить план',
+    importPlanDescription: 'Импортирует новые задачи и проекты из плана',
+    backup: 'Backup',
+    backupTitle: 'Резервная копия',
+    backupDescription:
+      'Полный экспорт и восстановление приложения. Импорт полностью заменяет локальные данные.',
+    downloadBackup: 'Скачать backup',
+    downloadBackupDescription: 'Сохраняет полную копию локальных данных в JSON',
+    restoreBackup: 'Восстановить backup',
+    restoreBackupDescription: 'Полностью заменяет текущую локальную базу выбранным backup',
+    exportButton: 'Export',
+    exportLoading: 'Export...',
+    importButton: 'Import',
+    importLoading: 'Import...',
+    backupExportLoading: 'Экспорт...',
+    replaceConfirmMessage: 'Это полностью заменит локальные данные. Продолжить?',
+    continue: 'Продолжить',
+    planExported: (projects: number, tasks: number) =>
+      `План выгружен: ${projects} ${pluralizeRu(projects, 'проект', 'проекта', 'проектов')}, ${tasks} ${pluralizeRu(tasks, 'задача', 'задачи', 'задач')}.`,
+    planImported: (projects: number, tasks: number) =>
+      `Импортировано: ${projects} ${pluralizeRu(projects, 'проект', 'проекта', 'проектов')}, ${tasks} ${pluralizeRu(tasks, 'задача', 'задачи', 'задач')}.`,
+    linkedExistingProjects: (count: number) => ` Использовано существующих проектов: ${count}.`,
+    reusedProjects: (count: number) => ` Совпавших проектов не дублировали: ${count}.`,
+    skippedTasks: (count: number) => ` Пропущено похожих задач: ${count}.`,
+    planImportSyntaxError: 'Файл плана повреждён или имеет неверный формат.',
+    planImportFallbackError: 'Не удалось загрузить план.',
+    backupImportSyntaxError: 'Файл backup повреждён или имеет неверный JSON-формат.',
+    backupImportFallbackError: 'Не удалось импортировать backup.',
+    previewTitle: 'Предпросмотр импорта плана',
+    metrics: {
+      projects: (count: number) => `Проектов ${count}`,
+      tasks: (count: number) => `Задач ${count}`,
+      selected: (count: number) => `Выбрано ${count}`,
+      deselected: (count: number) => `Снято ${count}`
+    },
+    blockedWarning: 'Есть задачи со снятыми проектами. Верни проект или сними такие задачи.',
+    selectAll: 'Выбрать всё',
+    clearAll: 'Снять всё',
+    projectsTitle: 'Проекты',
+    tasksTitle: 'Задачи',
+    reuseBadge: 'Уже есть',
+    newBadge: 'Новый',
+    linkedProject: (title: string) => `Будет привязан к существующему проекту: ${title}`,
+    projectHasNoSelectedTasks: 'У этого проекта не осталось выбранных задач.',
+    noNewProjects: 'В этом плане нет новых проектов.',
+    noNewTasks: 'В этом плане нет новых задач.',
+    dueDate: 'Дедлайн',
+    noDueDate: 'не задан',
+    repeat: 'Повтор',
+    chooseProjectFirst: 'Сначала выбери проект, чтобы импортировать эту задачу.',
+    importSelectedNote:
+      'Импортируются только отмеченные элементы. Дубликаты и задачи со снятыми проектами не будут применены.',
+    importSelected: 'Импортировать выбранное',
+    planBucketLabels: {
+      today: 'Today',
+      next: 'Next',
+      backlog: 'Backlog',
+      inbox: 'Inbox'
+    },
+    planPeriodicityLabels: {
+      daily: 'ежедневно',
+      weekly: 'еженедельно',
+      'one-time': 'разовая',
+      monthly: 'ежемесячно',
+      yearly: 'ежегодно'
+    }
+  },
+  en: {
+    sections: 'Sections',
+    ledger: 'XP Ledger',
+    log: 'Daily Log',
+    manual: 'Manual',
+    tetris: 'Tetris',
+    interface: 'Interface',
+    language: 'Language',
+    style: 'Style',
+    themeLabels: {
+      classic: 'Classic',
+      vault: 'Retro',
+      handwritten: 'Handwritten',
+      hud: 'HUD'
+    },
+    handwrittenHint: 'The background is shown at 20% opacity.',
+    removeBackground: 'Remove background',
+    failedReadBackground: 'Failed to read background image.',
+    vexaCompanion: 'Vexa companion',
+    motion: 'Motion',
+    motionModes: {
+      full: 'Full',
+      reduced: 'Reduced',
+      static: 'Static'
+    },
+    returnVexa: 'Return Vexa',
+    hideVexa: 'Hide Vexa',
+    xp: 'XP',
+    editXpBalance: 'Edit XP balance',
+    currentBalance: (xp: number) => `Current balance: ${xp} XP`,
+    xpBalance: 'XP balance',
+    invalidXp: 'Invalid XP value.',
+    failedUpdateXp: 'Failed to update XP.',
+    cancel: 'Cancel',
+    save: 'Save',
+    saving: 'Saving...',
+    app: 'Application',
+    updateApp: 'Update app',
+    updatingApp: 'Updating...',
+    updateStatus: {
+      checking: 'Checking for updates...',
+      reloading: 'Update found. Reloading...',
+      noUpdate: 'No updates available.',
+      error: 'Failed to update the app.'
+    },
+    allowInBrowser: 'Allow in browser',
+    checkNow: 'Check now',
+    data: 'Data',
+    dataNote:
+      'Tasks are stored locally in the current browser and app address. Different profiles, localhost, and 127.0.0.1 use separate databases.',
+    importExport: 'Import / Export',
+    transferSummary: 'Planning and backup',
+    transferTitle: 'Transfer and planning',
+    transferDescription: 'Planning JSON is for new tasks; backup JSON is for a full database copy.',
+    howToUse: 'How to use',
+    planForAi: 'Plan for AI',
+    aiPrompt: 'AI prompt',
+    planning: 'Planning',
+    planningDescription: 'Exports the plan out and imports new tasks and projects back in.',
+    exportPlan: 'Export plan',
+    exportPlanDescription: 'Exports tasks and projects for external planning',
+    importPlan: 'Import plan',
+    importPlanDescription: 'Imports new tasks and projects from a plan',
+    backup: 'Backup',
+    backupTitle: 'Backup',
+    backupDescription: 'Full app export and restore. Import fully replaces local data.',
+    downloadBackup: 'Download backup',
+    downloadBackupDescription: 'Saves a full local data copy as JSON',
+    restoreBackup: 'Restore backup',
+    restoreBackupDescription: 'Fully replaces the current local database with the selected backup',
+    exportButton: 'Export',
+    exportLoading: 'Export...',
+    importButton: 'Import',
+    importLoading: 'Import...',
+    backupExportLoading: 'Export...',
+    replaceConfirmMessage: 'This will fully replace local data. Continue?',
+    continue: 'Continue',
+    planExported: (projects: number, tasks: number) =>
+      `Plan exported: ${projects} project${projects === 1 ? '' : 's'}, ${tasks} task${tasks === 1 ? '' : 's'}.`,
+    planImported: (projects: number, tasks: number) =>
+      `Imported: ${projects} project${projects === 1 ? '' : 's'}, ${tasks} task${tasks === 1 ? '' : 's'}.`,
+    linkedExistingProjects: (count: number) => ` Used existing projects: ${count}.`,
+    reusedProjects: (count: number) => ` Matching projects were not duplicated: ${count}.`,
+    skippedTasks: (count: number) => ` Similar tasks skipped: ${count}.`,
+    planImportSyntaxError: 'The plan file is damaged or has an invalid format.',
+    planImportFallbackError: 'Could not load the plan.',
+    backupImportSyntaxError: 'The backup file is damaged or has invalid JSON.',
+    backupImportFallbackError: 'Could not import the backup.',
+    previewTitle: 'Plan Import Preview',
+    metrics: {
+      projects: (count: number) => `Projects ${count}`,
+      tasks: (count: number) => `Tasks ${count}`,
+      selected: (count: number) => `Selected ${count}`,
+      deselected: (count: number) => `Unchecked ${count}`
+    },
+    blockedWarning: 'Some selected tasks belong to unchecked projects. Select the project or uncheck those tasks.',
+    selectAll: 'Select all',
+    clearAll: 'Clear all',
+    projectsTitle: 'Projects',
+    tasksTitle: 'Tasks',
+    reuseBadge: 'Existing',
+    newBadge: 'New',
+    linkedProject: (title: string) => `Will be linked to existing project: ${title}`,
+    projectHasNoSelectedTasks: 'This project has no selected tasks left.',
+    noNewProjects: 'This plan has no new projects.',
+    noNewTasks: 'This plan has no new tasks.',
+    dueDate: 'Due date',
+    noDueDate: 'not set',
+    repeat: 'Repeat',
+    chooseProjectFirst: 'Select the project first to import this task.',
+    importSelectedNote:
+      'Only checked items will be imported. Duplicates and tasks with unchecked projects will not be applied.',
+    importSelected: 'Import selected',
+    planBucketLabels: {
+      today: 'Today',
+      next: 'Next',
+      backlog: 'Backlog',
+      inbox: 'Inbox'
+    },
+    planPeriodicityLabels: {
+      daily: 'daily',
+      weekly: 'weekly',
+      'one-time': 'one-time',
+      monthly: 'monthly',
+      yearly: 'yearly'
+    }
+  }
+} satisfies Record<AppLocale, unknown>;
 
 const pluralizeRu = (count: number, one: string, few: string, many: string) => {
   const mod10 = count % 10;
@@ -60,21 +305,23 @@ const pluralizeRu = (count: number, one: string, few: string, many: string) => {
   return many;
 };
 
-const formatPlanImportResult = (projects: number, tasks: number) =>
-  `Импортировано: ${projects} ${pluralizeRu(projects, 'проект', 'проекта', 'проектов')}, ${tasks} ${pluralizeRu(tasks, 'задача', 'задачи', 'задач')}.`;
+type SettingsCopy = (typeof SETTINGS_COPY)[AppLocale];
 
-const getPlanImportErrorText = (error: unknown) => {
+const formatPlanImportResult = (copy: SettingsCopy, projects: number, tasks: number) =>
+  copy.planImported(projects, tasks);
+
+const getPlanImportErrorText = (error: unknown, copy: SettingsCopy) => {
   if (error instanceof SyntaxError) {
-    return 'Файл плана повреждён или имеет неверный формат.';
+    return copy.planImportSyntaxError;
   }
-  return error instanceof Error ? error.message : 'Не удалось загрузить план.';
+  return error instanceof Error ? error.message : copy.planImportFallbackError;
 };
 
-const getBackupImportErrorText = (error: unknown) => {
+const getBackupImportErrorText = (error: unknown, copy: SettingsCopy) => {
   if (error instanceof SyntaxError) {
-    return 'Файл backup повреждён или имеет неверный JSON-формат.';
+    return copy.backupImportSyntaxError;
   }
-  return error instanceof Error ? error.message : 'Не удалось импортировать backup.';
+  return error instanceof Error ? error.message : copy.backupImportFallbackError;
 };
 
 const getPlanPreviewNote = (value?: string, maxLength = 120) => {
@@ -131,6 +378,7 @@ export function SettingsPage({
   const [savingXp, setSavingXp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const planFileInputRef = useRef<HTMLInputElement | null>(null);
+  const planPreviewReturnFocusRef = useRef<HTMLElement | null>(null);
   const [planExporting, setPlanExporting] = useState(false);
   const [planImporting, setPlanImporting] = useState(false);
   const [planImportApplying, setPlanImportApplying] = useState(false);
@@ -148,24 +396,30 @@ export function SettingsPage({
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermissionState>(() => getNotificationPermissionState());
   const [notificationHelpText, setNotificationHelpText] = useState<string | null>(null);
+  const { locale, setLocale } = useLocale();
+  const copy = SETTINGS_COPY[locale];
+  const reminderCopy = reminderTranslations[locale];
+  const importExportGuide = getImportExportGuide(locale);
+  const planPreviewOpen = Boolean(planPreview);
+  const planPreviewTitleId = 'tm-plan-preview-title';
 
   const interfaceLabel =
     interfaceTheme === 'vault'
-      ? 'Retro'
+      ? copy.themeLabels.vault
       : interfaceTheme === 'handwritten'
-      ? 'Рукописный'
+      ? copy.themeLabels.handwritten
       : interfaceTheme === 'hud'
-      ? 'HUD'
-      : 'Classic';
+      ? copy.themeLabels.hud
+      : copy.themeLabels.classic;
   const updateStatusLabel =
     updateStatus === 'checking'
-      ? 'Проверяем обновления...'
+      ? copy.updateStatus.checking
       : updateStatus === 'reloading'
-      ? 'Обновление найдено. Перезагрузка...'
+      ? copy.updateStatus.reloading
       : updateStatus === 'no-update'
-      ? 'Обновлений нет.'
+      ? copy.updateStatus.noUpdate
       : updateStatus === 'error'
-      ? 'Не удалось обновить приложение.'
+      ? copy.updateStatus.error
       : '';
   const updateStatusClass =
     updateStatus === 'error'
@@ -205,6 +459,30 @@ export function SettingsPage({
     void loadReminderSettings();
   }, []);
 
+  useEffect(() => {
+    if (!planPreviewOpen || typeof document === 'undefined') return;
+    planPreviewReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      planPreviewReturnFocusRef.current?.focus();
+      planPreviewReturnFocusRef.current = null;
+    };
+  }, [planPreviewOpen]);
+
+  useEffect(() => {
+    if (!planPreview || typeof document === 'undefined') return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !planImportApplying) {
+        setPlanPreview(null);
+        setPlanSelection({ projectClientIds: [], taskIds: [] });
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [planImportApplying, planPreview]);
+
   const downloadJsonFile = (filename: string, payload: unknown) => {
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json'
@@ -242,15 +520,15 @@ export function SettingsPage({
         const text = await file.text();
         const payload = JSON.parse(text);
         const confirmed = await showAppConfirm({
-          message: 'Это полностью заменит локальные данные. Продолжить?',
-          confirmLabel: 'Продолжить',
+          message: copy.replaceConfirmMessage,
+          confirmLabel: copy.continue,
           tone: 'danger'
         });
         if (!confirmed) return;
         await replaceAllFromImport(payload);
         window.location.reload();
       } catch (error) {
-        await showAppAlert(getBackupImportErrorText(error));
+        await showAppAlert(getBackupImportErrorText(error, copy));
       } finally {
         event.target.value = '';
       }
@@ -265,12 +543,12 @@ export function SettingsPage({
       downloadJsonFile('plan-export.json', payload);
       setPlanStatus({
         tone: 'success',
-        text: `План выгружен: ${payload.projects.length} projects, ${payload.tasks.length} tasks.`
+        text: copy.planExported(payload.projects.length, payload.tasks.length)
       });
     } catch (error) {
       setPlanStatus({
         tone: 'error',
-        text: error instanceof Error ? error.message : 'Не удалось выгрузить план.'
+        text: error instanceof Error ? error.message : copy.planImportFallbackError
       });
     } finally {
       setPlanExporting(false);
@@ -295,7 +573,7 @@ export function SettingsPage({
     } catch (error) {
       setPlanStatus({
         tone: 'error',
-        text: getPlanImportErrorText(error)
+        text: getPlanImportErrorText(error, copy)
       });
     } finally {
       setPlanImporting(false);
@@ -415,6 +693,11 @@ export function SettingsPage({
     await onInterfaceChange(next);
   };
 
+  const handleLocaleChange = async (next: AppLocale) => {
+    if (next === locale) return;
+    await setLocale(next);
+  };
+
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -432,7 +715,7 @@ export function SettingsPage({
         await onHandwrittenBackgroundChange(dataUrl);
       }
     } catch (error) {
-      await showAppAlert('Failed to read background image.');
+      await showAppAlert(copy.failedReadBackground);
     } finally {
       event.target.value = '';
     }
@@ -450,7 +733,7 @@ export function SettingsPage({
   const handleSaveXp = async () => {
     const parsed = Number(xpDraft);
     if (!Number.isFinite(parsed)) {
-      await showAppAlert('Invalid XP value.');
+      await showAppAlert(copy.invalidXp);
       return;
     }
 
@@ -474,7 +757,7 @@ export function SettingsPage({
       setXp(nextXp);
       setEditingXp(false);
     } catch (error) {
-      await showAppAlert('Failed to update XP.');
+      await showAppAlert(copy.failedUpdateXp);
     } finally {
       setSavingXp(false);
     }
@@ -532,17 +815,17 @@ export function SettingsPage({
       setPlanStatus({
         tone: 'success',
         text:
-          formatPlanImportResult(result.createdProjects, result.createdTasks) +
+          formatPlanImportResult(copy, result.createdProjects, result.createdTasks) +
           (result.linkedExistingProjects > 0
-            ? ` Использовано существующих проектов: ${result.linkedExistingProjects}.`
+            ? copy.linkedExistingProjects(result.linkedExistingProjects)
             : '') +
-          (result.reusedProjects > 0 ? ` Совпавших проектов не дублировали: ${result.reusedProjects}.` : '') +
-          (result.skippedTasks > 0 ? ` Пропущено похожих задач: ${result.skippedTasks}.` : '')
+          (result.reusedProjects > 0 ? copy.reusedProjects(result.reusedProjects) : '') +
+          (result.skippedTasks > 0 ? copy.skippedTasks(result.skippedTasks) : '')
       });
     } catch (error) {
       setPlanStatus({
         tone: 'error',
-        text: getPlanImportErrorText(error)
+        text: getPlanImportErrorText(error, copy)
       });
     } finally {
       setPlanImportApplying(false);
@@ -581,47 +864,47 @@ export function SettingsPage({
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-settings-frame tm-reveal space-y-4 p-3 sm:p-6">
-          <h1 className="sr-only">Settings</h1>
+          <h1 className="sr-only">{copy.interface}</h1>
           <div className="space-y-2">
-            <p className="tm-label">Sections</p>
+            <p className="tm-label">{copy.sections}</p>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => onNavigate('ledger')}
                 className="tm-button tm-button-steel"
               >
-                Ledger
+                {copy.ledger}
               </button>
               <button
                 onClick={() => onNavigate('log')}
                 className="tm-button tm-button-steel"
               >
-                Log
+                {copy.log}
               </button>
               <button
                 onClick={() => onNavigate('manual')}
                 className="tm-button tm-button-steel"
               >
-                Manual
+                {copy.manual}
               </button>
               {tetrisAvailable ? (
                 <button
                   onClick={() => onNavigate('tetris')}
                   className="tm-button tm-button-gold"
                 >
-                  Tetris
+                  {copy.tetris}
                 </button>
               ) : null}
             </div>
           </div>
           <div className="space-y-2">
-            <p className="tm-label">Interface</p>
+            <p className="tm-label">{copy.interface}</p>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleInterfaceToggle}
                 className="tm-button tm-button-steel"
                 aria-expanded={interfaceOpen}
               >
-                Interface
+                {copy.interface}
               </button>
               <span className="text-sm text-amber-200/70">
                 {interfaceLabel}
@@ -629,7 +912,25 @@ export function SettingsPage({
             </div>
             {interfaceOpen ? (
               <div className="tm-panel-soft p-3 space-y-2">
-                <p className="text-xs text-amber-200/70">Style</p>
+                <p className="text-xs text-amber-200/70">{copy.language}</p>
+                <div className="flex flex-wrap gap-2">
+                  {(['ru', 'en'] as const).map((nextLocale) => (
+                    <button
+                      key={nextLocale}
+                      type="button"
+                      onClick={() => {
+                        void handleLocaleChange(nextLocale);
+                      }}
+                      className={`tm-button ${
+                        locale === nextLocale ? 'tm-button-gold' : 'tm-button-ghost'
+                      }`}
+                      aria-pressed={locale === nextLocale}
+                    >
+                      {APP_LOCALE_LABELS[nextLocale]}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-200/70">{copy.style}</p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => handleThemeChange('classic')}
@@ -637,7 +938,7 @@ export function SettingsPage({
                       interfaceTheme === 'classic' ? 'tm-button-gold' : 'tm-button-ghost'
                     }`}
                   >
-                    Classic
+                    {copy.themeLabels.classic}
                   </button>
                   <button
                     onClick={() => handleThemeChange('vault')}
@@ -645,7 +946,7 @@ export function SettingsPage({
                       interfaceTheme === 'vault' ? 'tm-button-gold' : 'tm-button-ghost'
                     }`}
                   >
-                    Retro
+                    {copy.themeLabels.vault}
                   </button>
                   <button
                     onClick={() => handleThemeChange('handwritten')}
@@ -653,7 +954,7 @@ export function SettingsPage({
                       interfaceTheme === 'handwritten' ? 'tm-button-gold' : 'tm-button-ghost'
                     }`}
                   >
-                    Рукописный
+                    {copy.themeLabels.handwritten}
                   </button>
                   <button
                     onClick={() => handleThemeChange('hud')}
@@ -661,13 +962,13 @@ export function SettingsPage({
                       interfaceTheme === 'hud' ? 'tm-button-gold' : 'tm-button-ghost'
                     }`}
                   >
-                    HUD
+                    {copy.themeLabels.hud}
                   </button>
                 </div>
                 {interfaceTheme === 'handwritten' ? (
                   <div className="pt-2 space-y-2">
                     <p className="text-xs text-amber-200/70">
-                      Фон виден с прозрачностью 20%.
+                      {copy.handwrittenHint}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <input
@@ -681,7 +982,7 @@ export function SettingsPage({
                           onClick={handleHandwrittenBackgroundClear}
                           className="tm-button tm-button-ghost tm-button-sm"
                         >
-                          Удалить фон
+                          {copy.removeBackground}
                         </button>
                       ) : null}
                     </div>
@@ -695,10 +996,10 @@ export function SettingsPage({
                       onChange={(event) => void onPetEnabledChange(event.target.checked)}
                       className="h-4 w-4 accent-amber-500"
                     />
-                    Vexa companion
+                    {copy.vexaCompanion}
                   </label>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-amber-200/70">Motion</span>
+                    <span className="text-xs text-amber-200/70">{copy.motion}</span>
                     {(['full', 'reduced', 'static'] as const).map((mode) => (
                       <button
                         key={mode}
@@ -710,7 +1011,7 @@ export function SettingsPage({
                         disabled={!petEnabled}
                         aria-pressed={petMotionMode === mode}
                       >
-                        {mode === 'full' ? 'Full' : mode === 'reduced' ? 'Reduced' : 'Static'}
+                        {copy.motionModes[mode]}
                       </button>
                     ))}
                     <button
@@ -718,7 +1019,7 @@ export function SettingsPage({
                       onClick={() => void onPetPositionReset()}
                       className="tm-button tm-button-sm tm-button-ghost"
                     >
-                      Return Vexa
+                      {copy.returnVexa}
                     </button>
                     <button
                       type="button"
@@ -726,7 +1027,7 @@ export function SettingsPage({
                       className="tm-button tm-button-sm tm-button-ghost"
                       disabled={!petEnabled}
                     >
-                      Hide Vexa
+                      {copy.hideVexa}
                     </button>
                   </div>
                 </div>
@@ -734,20 +1035,20 @@ export function SettingsPage({
             ) : null}
           </div>
           <div className="space-y-2">
-            <p className="tm-label">XP</p>
+            <p className="tm-label">{copy.xp}</p>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={openXpEditor}
                 className="tm-button tm-button-steel"
               >
-                Edit XP balance
+                {copy.editXpBalance}
               </button>
-              <span className="text-sm text-amber-200/80">Текущий баланс: {xp} XP</span>
+              <span className="text-sm text-amber-200/80">{copy.currentBalance(xp)}</span>
             </div>
             {editingXp ? (
               <div className="tm-panel-soft p-3 space-y-3">
                 <div>
-                  <label className="block text-sm tm-label mb-1">XP balance</label>
+                  <label className="block text-sm tm-label mb-1">{copy.xpBalance}</label>
                   <input
                     type="number"
                     step={1}
@@ -763,27 +1064,27 @@ export function SettingsPage({
                     className="tm-button tm-button-ghost"
                     disabled={savingXp}
                   >
-                    Cancel
+                    {copy.cancel}
                   </button>
                   <button
                     onClick={handleSaveXp}
                     className="tm-button tm-button-gold"
                     disabled={savingXp}
                   >
-                    {savingXp ? 'Saving...' : 'Save'}
+                    {savingXp ? copy.saving : copy.save}
                   </button>
                 </div>
               </div>
             ) : null}
           </div>
           <div className="space-y-2">
-            <p className="tm-label">Приложение</p>
+            <p className="tm-label">{copy.app}</p>
             <button
               onClick={handleUpdateApp}
               disabled={updating}
               className="tm-button tm-button-primary"
             >
-              {updating ? 'Обновление...' : 'Обновить приложение'}
+              {updating ? copy.updatingApp : copy.updateApp}
             </button>
             {updateStatus !== 'idle' ? (
               <p className={`text-xs ${updateStatusClass}`} role="status" aria-live="polite">
@@ -822,7 +1123,7 @@ export function SettingsPage({
                       className="tm-button tm-button-primary"
                       disabled={notificationPermission === 'unsupported'}
                     >
-                      Разрешить в браузере
+                      {copy.allowInBrowser}
                     </button>
                   ) : (
                     <button
@@ -830,7 +1131,7 @@ export function SettingsPage({
                       onClick={() => void runReminderCheck()}
                       className="tm-button tm-button-ghost"
                     >
-                      Проверить сейчас
+                      {copy.checkNow}
                     </button>
                   )}
                 </div>
@@ -913,10 +1214,9 @@ export function SettingsPage({
             ) : null}
           </div>
           <div className="space-y-2">
-            <p className="tm-label">Данные</p>
+            <p className="tm-label">{copy.data}</p>
             <p className="tm-settings-data-note max-w-2xl text-xs leading-relaxed text-amber-200/65">
-              Задачи хранятся локально в текущем браузере и адресе приложения. Разные
-              профили, localhost и 127.0.0.1 используют отдельные базы.
+              {copy.dataNote}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -924,19 +1224,19 @@ export function SettingsPage({
                 className="tm-button tm-button-steel"
                 aria-expanded={transferOpen}
               >
-                Импорт / экспорт
+                {copy.importExport}
               </button>
               <span className="text-sm text-amber-200/70">
-                Планирование и backup
+                {copy.transferSummary}
               </span>
             </div>
             {transferOpen ? (
               <div className="tm-panel-soft p-3 space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <p className="text-sm text-amber-100">Перенос и планирование</p>
+                    <p className="text-sm text-amber-100">{copy.transferTitle}</p>
                     <p className="text-xs text-amber-200/70">
-                      Planning JSON для новых задач, backup JSON для полной копии базы.
+                      {copy.transferDescription}
                     </p>
                   </div>
                   <button
@@ -945,7 +1245,7 @@ export function SettingsPage({
                     className="tm-button tm-button-steel"
                     aria-expanded={transferGuideOpen}
                   >
-                    Как пользоваться
+                    {copy.howToUse}
                   </button>
                 </div>
 
@@ -953,41 +1253,41 @@ export function SettingsPage({
                   <div className="tm-transfer-guide space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="space-y-2">
-                        <p className="text-sm font-semibold tm-title">План для нейронки</p>
+                        <p className="text-sm font-semibold tm-title">{copy.planForAi}</p>
                         <ul className="space-y-1.5 text-xs leading-5 text-amber-100/85 pl-4 list-disc">
-                          {PLAN_IMPORT_GUIDE_ITEMS.map((item) => (
+                          {importExportGuide.planImportGuideItems.map((item) => (
                             <li key={item}>{item}</li>
                           ))}
                         </ul>
                       </div>
                       <div className="space-y-2">
-                        <p className="text-sm font-semibold tm-title">Backup</p>
+                        <p className="text-sm font-semibold tm-title">{copy.backup}</p>
                         <ul className="space-y-1.5 text-xs leading-5 text-amber-100/85 pl-4 list-disc">
-                          {BACKUP_GUIDE_ITEMS.map((item) => (
+                          {importExportGuide.backupGuideItems.map((item) => (
                             <li key={item}>{item}</li>
                           ))}
                         </ul>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-semibold tm-title">Промпт для нейронки</p>
-                      <pre className="tm-transfer-prompt whitespace-pre-wrap text-xs leading-5"><code>{TASKMAN_PLAN_PROMPT}</code></pre>
+                      <p className="text-sm font-semibold tm-title">{copy.aiPrompt}</p>
+                      <pre className="tm-transfer-prompt whitespace-pre-wrap text-xs leading-5"><code>{importExportGuide.taskmanPlanPrompt}</code></pre>
                     </div>
                   </div>
                 ) : null}
 
                 <div className="space-y-3">
                   <div className="min-w-0">
-                    <p className="text-sm text-amber-100">Планирование</p>
+                    <p className="text-sm text-amber-100">{copy.planning}</p>
                     <p className="text-xs text-amber-200/70">
-                      Экспортирует план наружу и импортирует новые задачи и проекты обратно.
+                      {copy.planningDescription}
                     </p>
                   </div>
                   <div className="tm-transfer-action-row">
                     <div className="min-w-0">
-                      <p className="text-sm text-amber-100">Выгрузить план</p>
+                      <p className="text-sm text-amber-100">{copy.exportPlan}</p>
                       <p className="text-xs text-amber-200/70">
-                        Экспортирует задачи и проекты для внешнего планирования
+                        {copy.exportPlanDescription}
                       </p>
                     </div>
                     <div className="tm-transfer-actions">
@@ -996,15 +1296,15 @@ export function SettingsPage({
                         disabled={planExporting}
                         className="tm-button tm-button-gold"
                       >
-                        {planExporting ? 'Export...' : 'Export'}
+                        {planExporting ? copy.exportLoading : copy.exportButton}
                       </button>
                     </div>
                   </div>
                   <div className="tm-transfer-action-row">
                     <div className="min-w-0">
-                      <p className="text-sm text-amber-100">Загрузить план</p>
+                      <p className="text-sm text-amber-100">{copy.importPlan}</p>
                       <p className="text-xs text-amber-200/70">
-                        Импортирует новые задачи и проекты из плана
+                        {copy.importPlanDescription}
                       </p>
                     </div>
                     <div className="tm-transfer-actions">
@@ -1013,23 +1313,23 @@ export function SettingsPage({
                         disabled={planImporting}
                         className="tm-button tm-button-primary"
                       >
-                        {planImporting ? 'Import...' : 'Import'}
+                        {planImporting ? copy.importLoading : copy.importButton}
                       </button>
                     </div>
                   </div>
                 </div>
                 <div className="border-t border-amber-400/15 pt-4 space-y-3">
                   <div className="min-w-0">
-                    <p className="text-sm text-amber-100">Резервная копия</p>
+                    <p className="text-sm text-amber-100">{copy.backupTitle}</p>
                     <p className="text-xs text-amber-200/70">
-                      Полный экспорт и восстановление приложения. Импорт полностью заменяет локальные данные.
+                      {copy.backupDescription}
                     </p>
                   </div>
                   <div className="tm-transfer-action-row">
                     <div className="min-w-0">
-                      <p className="text-sm text-amber-100">Скачать backup</p>
+                      <p className="text-sm text-amber-100">{copy.downloadBackup}</p>
                       <p className="text-xs text-amber-200/70">
-                        Сохраняет полную копию локальных данных в JSON
+                        {copy.downloadBackupDescription}
                       </p>
                     </div>
                     <div className="tm-transfer-actions">
@@ -1038,15 +1338,15 @@ export function SettingsPage({
                         disabled={exporting}
                         className="tm-button tm-button-gold"
                       >
-                        {exporting ? 'Экспорт...' : 'Скачать backup'}
+                        {exporting ? copy.backupExportLoading : copy.downloadBackup}
                       </button>
                     </div>
                   </div>
                   <div className="tm-transfer-action-row">
                     <div className="min-w-0">
-                      <p className="text-sm text-amber-100">Восстановить backup</p>
+                      <p className="text-sm text-amber-100">{copy.restoreBackup}</p>
                       <p className="text-xs text-amber-200/70">
-                        Полностью заменяет текущую локальную базу выбранным backup
+                        {copy.restoreBackupDescription}
                       </p>
                     </div>
                     <div className="tm-transfer-actions">
@@ -1054,7 +1354,7 @@ export function SettingsPage({
                         onClick={handleImportClick}
                         className="tm-button tm-button-primary"
                       >
-                        Восстановить backup
+                        {copy.restoreBackup}
                       </button>
                     </div>
                   </div>
@@ -1091,29 +1391,34 @@ export function SettingsPage({
       </div>
       {planPreview ? (
         <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center px-3 py-4 sm:px-4 sm:py-6 overflow-y-auto z-[220]">
-          <div className="w-full max-w-4xl tm-panel p-3 sm:p-4 shadow-xl max-h-[90vh] overflow-hidden flex flex-col gap-3">
+          <div
+            className="w-full max-w-4xl tm-panel p-3 sm:p-4 shadow-xl max-h-[90vh] overflow-hidden flex flex-col gap-3"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={planPreviewTitleId}
+          >
             <div className="space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <h2 className="text-lg sm:text-xl font-semibold tm-title">Предпросмотр импорта плана</h2>
+                  <h2 id={planPreviewTitleId} className="text-lg sm:text-xl font-semibold tm-title">{copy.previewTitle}</h2>
                 </div>
                 <button
                   onClick={closePlanPreview}
                   className="tm-button tm-button-ghost tm-button-sm px-3 py-1.5"
                   disabled={planImportApplying}
                 >
-                  Отмена
+                  {copy.cancel}
                 </button>
               </div>
               <div className="tm-plan-preview-metrics">
-                <span>Проектов {previewProjectCount}</span>
-                <span>Задач {previewTaskCount}</span>
-                <span>Выбрано {previewSelectedCount}</span>
-                <span>Снято {previewDeselectedCount}</span>
+                <span>{copy.metrics.projects(previewProjectCount)}</span>
+                <span>{copy.metrics.tasks(previewTaskCount)}</span>
+                <span>{copy.metrics.selected(previewSelectedCount)}</span>
+                <span>{copy.metrics.deselected(previewDeselectedCount)}</span>
               </div>
               {previewHasBlockedSelection ? (
                 <div className="tm-plan-preview-warning">
-                  Есть задачи со снятыми проектами. Верни проект или сними такие задачи.
+                  {copy.blockedWarning}
                 </div>
               ) : null}
               <div className="flex flex-wrap items-center gap-2">
@@ -1122,21 +1427,21 @@ export function SettingsPage({
                   className="tm-button tm-button-gold tm-button-sm"
                   disabled={planImportApplying}
                 >
-                  Выбрать всё
+                  {copy.selectAll}
                 </button>
                 <button
                   onClick={handleClearPlanSelection}
                   className="tm-button tm-button-ghost tm-button-sm"
                   disabled={planImportApplying}
                 >
-                  Снять всё
+                  {copy.clearAll}
                 </button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto pr-1 space-y-3">
               <section className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold tm-title">Проекты</h3>
+                  <h3 className="text-sm font-semibold tm-title">{copy.projectsTitle}</h3>
                   <span className="text-xs text-amber-200/65">{previewProjectCount}</span>
                 </div>
                 {planPreview.projects.length > 0 ? (
@@ -1156,7 +1461,7 @@ export function SettingsPage({
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-semibold tm-title">{project.title}</span>
                               <span className={`tm-badge ${project.mode === 'reuse' ? 'tm-badge-note' : ''}`}>
-                                {project.mode === 'reuse' ? 'Уже есть' : 'Новый'}
+                                {project.mode === 'reuse' ? copy.reuseBadge : copy.newBadge}
                               </span>
                             </div>
                             {project.description ? (
@@ -1164,12 +1469,12 @@ export function SettingsPage({
                             ) : null}
                             {project.mode === 'reuse' && project.existingProjectTitle ? (
                               <p className="text-[11px] text-amber-200/65">
-                                Будет привязан к существующему проекту: {project.existingProjectTitle}
+                                {copy.linkedProject(project.existingProjectTitle)}
                               </p>
                             ) : null}
                             {isSelected && selectedTaskCount === 0 ? (
                               <p className="text-[11px] text-amber-200/65">
-                                У этого проекта не осталось выбранных задач.
+                                {copy.projectHasNoSelectedTasks}
                               </p>
                             ) : null}
                           </div>
@@ -1179,13 +1484,13 @@ export function SettingsPage({
                   </div>
                 ) : (
                   <div className="tm-screen p-3 text-sm text-amber-200/70">
-                    В этом плане нет новых проектов.
+                    {copy.noNewProjects}
                   </div>
                 )}
               </section>
               <section className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold tm-title">Задачи</h3>
+                  <h3 className="text-sm font-semibold tm-title">{copy.tasksTitle}</h3>
                   <span className="text-xs text-amber-200/65">{previewTaskCount}</span>
                 </div>
                 {planPreview.tasks.length > 0 ? (
@@ -1212,13 +1517,13 @@ export function SettingsPage({
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="font-semibold tm-title">{task.title}</span>
-                              <span className="tm-badge">{PLAN_BUCKET_LABELS[task.bucket]}</span>
+                              <span className="tm-badge">{copy.planBucketLabels[task.bucket]}</span>
                             {task.projectTitle ? (
                                 <span className="tm-badge tm-badge-note">{task.projectTitle}</span>
                               ) : null}
                             </div>
                             <p className="text-[11px] text-amber-200/68">
-                              Дедлайн: {task.dueDate ?? 'не задан'} · Повтор: {PLAN_PERIODICITY_LABELS[task.periodicity]} · {task.value} XP
+                              {copy.dueDate}: {task.dueDate ?? copy.noDueDate} · {copy.repeat}: {copy.planPeriodicityLabels[task.periodicity]} · {task.value} XP
                             </p>
                             {notePreview ? (
                               <p className="text-xs text-amber-100/80 break-words">{notePreview}</p>
@@ -1228,7 +1533,7 @@ export function SettingsPage({
                             ) : null}
                             {projectUnavailable ? (
                               <p className="text-[11px] text-red-300/80">
-                                Сначала выбери проект, чтобы импортировать эту задачу.
+                                {copy.chooseProjectFirst}
                               </p>
                             ) : null}
                           </div>
@@ -1238,14 +1543,14 @@ export function SettingsPage({
                   </div>
                 ) : (
                   <div className="tm-screen p-3 text-sm text-amber-200/70">
-                    В этом плане нет новых задач.
+                    {copy.noNewTasks}
                   </div>
                 )}
               </section>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t border-amber-400/15 pt-2.5">
               <p className="text-xs text-amber-200/70">
-                Импортируются только отмеченные элементы. Дубликаты и задачи со снятыми проектами не будут применены.
+                {copy.importSelectedNote}
               </p>
               <div className="flex justify-end gap-2">
                 <button
@@ -1253,14 +1558,14 @@ export function SettingsPage({
                   className="tm-button tm-button-ghost tm-button-sm px-3 py-1.5"
                   disabled={planImportApplying}
                 >
-                  Отмена
+                  {copy.cancel}
                 </button>
                 <button
                   onClick={handleApplyPlanImport}
                   className="tm-button tm-button-primary"
                   disabled={previewImportDisabled}
                 >
-                  {planImportApplying ? 'Импорт...' : 'Импортировать выбранное'}
+                  {planImportApplying ? copy.importLoading : copy.importSelected}
                 </button>
               </div>
             </div>

@@ -1,8 +1,5 @@
-import {
-  BACKUP_GUIDE_ITEMS,
-  PLAN_IMPORT_GUIDE_ITEMS,
-  TASKMAN_PLAN_PROMPT
-} from '../content/importExportGuide';
+import { getImportExportGuide } from '../content/importExportGuide';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
 type ManualSection = {
   id: string;
@@ -12,7 +9,125 @@ type ManualSection = {
   prompt?: string;
 };
 
-const MANUAL_SECTIONS: ManualSection[] = [
+const MANUAL_COPY = {
+  ru: {
+    title: 'Мануал',
+    summary:
+      'Краткое руководство по текущим функциям приложения. Описаны только те возможности, которые уже есть в интерфейсе.',
+    back: 'Назад в настройки',
+    contents: 'Содержание',
+    aiPrompt: 'Промпт для нейронки'
+  },
+  en: {
+    title: 'Manual',
+    summary:
+      'A short guide to the app features that are currently available in the interface.',
+    back: 'Back to Settings',
+    contents: 'Contents',
+    aiPrompt: 'AI prompt'
+  }
+} satisfies Record<AppLocale, unknown>;
+
+const getManualSections = (locale: AppLocale): ManualSection[] => {
+  const guide = getImportExportGuide(locale);
+
+  if (locale === 'en') {
+    return [
+      {
+        id: 'navigation',
+        title: 'Navigation and App Logic',
+        summary:
+          'The main areas are in the top navigation; utility and data-flow screens live inside Settings.',
+        items: [
+          'Use the top menu to switch between Today, Projects, Progress, Calendar, Notes, and Settings.',
+          'On narrow screens the top navigation scrolls horizontally instead of wrapping.',
+          'Progress contains three tabs: Skills, Shop, and Analytics.',
+          'Settings contains utility screens: XP Ledger, Daily Log, Manual, and Tetris.',
+          'Changes are saved automatically. Use Planning Export / Import for task exchange, and backup for a full database copy.'
+        ]
+      },
+      {
+        id: 'today',
+        title: 'Today',
+        summary: 'The main screen for daily work, queues, and day progress.',
+        items: [
+          'The top summary shows how the day is going and the nearest pinned reward progress.',
+          'Tasks are organized into Today, Inbox, Next, and Backlog. You can change the queue when creating or editing a task.',
+          'Upcoming deadlines can appear in the main day layer without changing the original queue.',
+          'New tasks support rarity, repetition, due date, reminder offset, checklist, progress, skill tags, project, and queue.',
+          'Task cards can be completed, skipped, restored, edited, exported to calendar, moved, or deleted.'
+        ]
+      },
+      {
+        id: 'projects',
+        title: 'Projects',
+        summary:
+          'Containers for larger goals. A project groups tasks and shows progress, but tasks remain the actual actions.',
+        items: [
+          'A project has a title, description, and status. Progress is calculated from linked tasks.',
+          'Tasks can be linked to a project while creating or editing them.',
+          'Project screens show progress, active tasks, completed tasks, and a quick path to create a task inside the project.',
+          'When a large project is completed, it can grant a separate XP bonus recorded in history.'
+        ]
+      },
+      {
+        id: 'progress',
+        title: 'Progress',
+        summary: 'A unified area for growth, rewards, and analytics.',
+        items: [
+          'Skills tracks life areas, attributes, skill goals, notes, and snapshots.',
+          'Shop contains XP rewards, repeatable rewards, cooldowns, and pinned rewards for the Today screen.',
+          'Analytics shows XP and task statistics across different periods.'
+        ]
+      },
+      {
+        id: 'calendar',
+        title: 'Calendar',
+        summary: 'A calendar view of tasks by date.',
+        items: [
+          'Day, Week, and Month modes are available.',
+          'You can jump to today and move between periods.',
+          'Day mode shows tasks for the selected date; week and month modes show task distribution by day.'
+        ]
+      },
+      {
+        id: 'notes',
+        title: 'Notes',
+        summary: 'A lightweight space for manually structured notes.',
+        items: [
+          'Each note has a title, short description, rarity, and main text.',
+          'Notes can be sorted manually, by rarity, or by creation time.',
+          'In manual sort mode, notes can be reordered with drag and drop.',
+          'A note card can be expanded, edited, or deleted.'
+        ]
+      },
+      {
+        id: 'transfer',
+        title: 'Import, Plan, and Backup',
+        summary:
+          'Two different transfer flows: planning JSON adds new tasks, while backup fully restores the local database.',
+        items: [
+          ...guide.planImportGuideItems,
+          ...guide.backupGuideItems,
+          'Data is tied to the current browser and app origin. To move between localhost:5173 and localhost:5174, create a backup on the old address and restore it on the new one.'
+        ],
+        prompt: guide.taskmanPlanPrompt
+      },
+      {
+        id: 'settings',
+        title: 'Settings',
+        summary: 'Interface, data, and utility actions.',
+        items: [
+          'Interface lets you switch language and visual theme.',
+          'The handwritten theme can use a custom background.',
+          'XP lets you manually edit the current balance.',
+          'Data contains Import / Export with planning Export / Import, backup download / restore, and a short guide.'
+        ]
+      }
+    ];
+  }
+
+  return [
   {
     id: 'navigation',
     title: 'Навигация и общая логика',
@@ -116,11 +231,11 @@ const MANUAL_SECTIONS: ManualSection[] = [
     title: 'Импорт, план и backup',
     summary: 'Два разных сценария переноса данных: planning JSON добавляет новые задачи, backup полностью восстанавливает локальную базу.',
     items: [
-      ...PLAN_IMPORT_GUIDE_ITEMS,
-      ...BACKUP_GUIDE_ITEMS,
+      ...guide.planImportGuideItems,
+      ...guide.backupGuideItems,
       'Файлы привязаны к текущему браузеру и origin приложения. Для переноса между localhost:5173 и localhost:5174 сначала сделайте backup на старом адресе, затем восстановите его на новом.'
     ],
-    prompt: TASKMAN_PLAN_PROMPT
+    prompt: guide.taskmanPlanPrompt
   },
   {
     id: 'settings',
@@ -135,30 +250,34 @@ const MANUAL_SECTIONS: ManualSection[] = [
       'Planning Import создаёт только новые проекты и задачи через preview. Backup restore полностью заменяет локальную базу.'
     ]
   }
-];
+  ];
+};
 
 export function ManualPage({ onBack }: { onBack: () => void }) {
+  const { locale } = useLocale();
+  const copy = MANUAL_COPY[locale];
+  const sections = getManualSections(locale);
+
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-reveal space-y-5 p-3 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tm-title">Manual</h1>
+              <h1 className="text-3xl font-semibold tm-title">{copy.title}</h1>
               <p className="tm-label max-w-3xl">
-                Краткое руководство по текущим функциям приложения. Описаны только те возможности,
-                которые уже есть в интерфейсе.
+                {copy.summary}
               </p>
             </div>
             <button onClick={onBack} className="tm-button tm-button-steel">
-              Back to Settings
+              {copy.back}
             </button>
           </div>
 
           <div className="tm-panel-soft p-3 sm:p-4 space-y-2">
-            <p className="tm-label">Содержание</p>
+            <p className="tm-label">{copy.contents}</p>
             <div className="flex flex-wrap gap-2">
-              {MANUAL_SECTIONS.map((section) => (
+              {sections.map((section) => (
                 <a
                   key={section.id}
                   href={`#manual-${section.id}`}
@@ -171,7 +290,7 @@ export function ManualPage({ onBack }: { onBack: () => void }) {
           </div>
 
           <div className="grid gap-4">
-            {MANUAL_SECTIONS.map((section) => (
+            {sections.map((section) => (
               <section
                 key={section.id}
                 id={`manual-${section.id}`}
@@ -188,7 +307,7 @@ export function ManualPage({ onBack }: { onBack: () => void }) {
                 </ul>
                 {section.prompt ? (
                   <div className="space-y-2">
-                    <p className="text-sm font-semibold tm-title">Промпт для нейронки</p>
+                    <p className="text-sm font-semibold tm-title">{copy.aiPrompt}</p>
                     <pre className="tm-transfer-prompt whitespace-pre-wrap text-xs leading-5"><code>{section.prompt}</code></pre>
                   </div>
                 ) : null}

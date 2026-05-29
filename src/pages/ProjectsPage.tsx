@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type DragEvent } from 'react';
 import { TaskEditorModal } from '../components/TaskEditorModal';
 import { showAppAlert } from '../components/AppDialog';
 import { listEvents } from '../db/repositories/ledgerRepo';
@@ -22,28 +22,143 @@ import {
   undoComplete,
   updateTask
 } from '../services/tasksService';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
-const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
-  active: 'Активный',
-  paused: 'На паузе',
-  completed: 'Завершён',
-  archived: 'Архив'
-};
-
-const PERIODICITY_LABELS: Record<Periodicity, string> = {
-  daily: 'Ежедневно',
-  weekly: 'Раз в неделю',
-  'one-time': 'Разово',
-  monthly: 'Раз в месяц',
-  yearly: 'Раз в год'
-};
-
-const QUEUE_LABELS: Record<TaskBucket, string> = {
-  today: 'Today',
-  inbox: 'Inbox',
-  next: 'Next',
-  backlog: 'Backlog'
-};
+const PROJECTS_COPY = {
+  ru: {
+    statusLabels: {
+      active: 'Активный',
+      paused: 'На паузе',
+      completed: 'Завершён',
+      archived: 'Архив'
+    } satisfies Record<ProjectStatus, string>,
+    periodicityLabels: {
+      daily: 'Ежедневно',
+      weekly: 'Раз в неделю',
+      'one-time': 'Разово',
+      monthly: 'Раз в месяц',
+      yearly: 'Раз в год'
+    } satisfies Record<Periodicity, string>,
+    queueLabels: {
+      today: 'Сегодня',
+      inbox: 'Inbox',
+      next: 'Next',
+      backlog: 'Backlog'
+    } satisfies Record<TaskBucket, string>,
+    editProject: 'Редактировать проект',
+    newProject: 'Новый проект',
+    title: 'Название',
+    titlePlaceholder: 'Например: Ремонт кухни',
+    description: 'Описание',
+    descriptionPlaceholder: 'Коротко: что входит в проект',
+    status: 'Статус',
+    cancel: 'Отмена',
+    saving: 'Сохранение...',
+    save: 'Сохранить',
+    editProjectTask: 'Редактировать задачу проекта',
+    newProjectTask: 'Новая задача проекта',
+    dragHint: 'Перетащить, чтобы изменить порядок',
+    overdue: 'Просрочено',
+    missed: 'Пропущено',
+    value: 'Ценность',
+    deadline: 'Дедлайн',
+    edit: 'Edit',
+    complete: 'Завершить',
+    undo: 'Undo',
+    projectCompleted: 'Проект завершён',
+    allTasksClosed: 'Все задачи проекта закрыты.',
+    completionBonus: (xp: number) => `Бонус за завершение: +${xp} XP`,
+    continue: 'Продолжить',
+    back: '← Projects',
+    addTask: '+ Задача',
+    editProjectAction: 'Изменить проект',
+    completedCount: (completed: number, total: number) => `${completed} / ${total} задач завершено`,
+    activeDone: (active: number, done: number) => `Активных ${active} · Сделано ${done}`,
+    progress: 'Прогресс',
+    bonusAwarded: (xp: number) => `Начислен бонус: +${xp} XP`,
+    activeTasks: 'Активные задачи',
+    emptyActive:
+      'В проекте пока нет активных задач. Добавь первую и прогресс появится автоматически.',
+    completedTasks: 'Завершённые задачи',
+    emptyCompleted:
+      'Пока ничего не закрыто. Когда завершишь первую задачу проекта, она появится здесь.',
+    intro: 'Контейнеры для больших целей. Прогресс считается по обычным задачам.',
+    addProject: '+ Проект',
+    loadingProjects: 'Загрузка проектов...',
+    emptyTitle: 'Пока нет Projects',
+    emptyText:
+      'Создай проект, а потом привязывай к нему обычные задачи. Прогресс будет считаться автоматически.',
+    createProject: 'Создать проект',
+    open: 'Открыть',
+    reorderFailed: 'Не удалось изменить порядок задач проекта.',
+    updatingTask: 'Обновляем задачу...'
+  },
+  en: {
+    statusLabels: {
+      active: 'Active',
+      paused: 'Paused',
+      completed: 'Completed',
+      archived: 'Archive'
+    } satisfies Record<ProjectStatus, string>,
+    periodicityLabels: {
+      daily: 'Daily',
+      weekly: 'Weekly',
+      'one-time': 'One-time',
+      monthly: 'Monthly',
+      yearly: 'Yearly'
+    } satisfies Record<Periodicity, string>,
+    queueLabels: {
+      today: 'Today',
+      inbox: 'Inbox',
+      next: 'Next',
+      backlog: 'Backlog'
+    } satisfies Record<TaskBucket, string>,
+    editProject: 'Edit Project',
+    newProject: 'New Project',
+    title: 'Title',
+    titlePlaceholder: 'Example: Kitchen renovation',
+    description: 'Description',
+    descriptionPlaceholder: 'Briefly describe what belongs here',
+    status: 'Status',
+    cancel: 'Cancel',
+    saving: 'Saving...',
+    save: 'Save',
+    editProjectTask: 'Edit Project Task',
+    newProjectTask: 'New Project Task',
+    dragHint: 'Drag to reorder',
+    overdue: 'Overdue',
+    missed: 'Missed',
+    value: 'Value',
+    deadline: 'Due',
+    edit: 'Edit',
+    complete: 'Complete',
+    undo: 'Undo',
+    projectCompleted: 'Project Completed',
+    allTasksClosed: 'All project tasks are closed.',
+    completionBonus: (xp: number) => `Completion bonus: +${xp} XP`,
+    continue: 'Continue',
+    back: '← Projects',
+    addTask: '+ Task',
+    editProjectAction: 'Edit Project',
+    completedCount: (completed: number, total: number) => `${completed} / ${total} tasks completed`,
+    activeDone: (active: number, done: number) => `Active ${active} · Done ${done}`,
+    progress: 'Progress',
+    bonusAwarded: (xp: number) => `Bonus awarded: +${xp} XP`,
+    activeTasks: 'Active Tasks',
+    emptyActive: 'This project has no active tasks yet. Add the first one to start tracking progress.',
+    completedTasks: 'Completed Tasks',
+    emptyCompleted: 'Nothing is closed yet. Completed project tasks will appear here.',
+    intro: 'Containers for larger goals. Progress is calculated from regular tasks.',
+    addProject: '+ Project',
+    loadingProjects: 'Loading projects...',
+    emptyTitle: 'No Projects Yet',
+    emptyText: 'Create a project, then attach regular tasks to it. Progress will update automatically.',
+    createProject: 'Create Project',
+    open: 'Open',
+    reorderFailed: 'Could not reorder project tasks.',
+    updatingTask: 'Updating task...'
+  }
+} satisfies Record<AppLocale, unknown>;
 
 const pad2 = (value: number) => value.toString().padStart(2, '0');
 
@@ -95,9 +210,11 @@ function ProjectProgressBar({ value }: { value: number }) {
 }
 
 function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
+  const { locale } = useLocale();
+  const copy = PROJECTS_COPY[locale];
   return (
     <span className={`tm-project-status ${getProjectStatusToneClass(status)}`}>
-      {PROJECT_STATUS_LABELS[status]}
+      {copy.statusLabels[status]}
     </span>
   );
 }
@@ -113,10 +230,14 @@ function ProjectModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const { locale } = useLocale();
+  const copy = PROJECTS_COPY[locale];
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<ProjectStatus>('active');
   const [saving, setSaving] = useState(false);
+  const titleId = useId();
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -125,6 +246,27 @@ function ProjectModal({
     setStatus(project?.status ?? 'active');
     setSaving(false);
   }, [open, project]);
+
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || saving || typeof document === 'undefined') return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, open, saving]);
 
   if (!open) return null;
 
@@ -156,41 +298,46 @@ function ProjectModal({
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
-      <div className="w-full max-w-md tm-panel p-6 shadow-xl space-y-4">
-        <h2 className="text-xl font-semibold tm-title">
-          {project ? 'Редактировать проект' : 'Новый проект'}
+      <div
+        className="w-full max-w-md tm-panel p-6 shadow-xl space-y-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <h2 id={titleId} className="text-xl font-semibold tm-title">
+          {project ? copy.editProject : copy.newProject}
         </h2>
         <div>
-          <label className="block text-sm tm-label mb-1">Название</label>
+          <label className="block text-sm tm-label mb-1">{copy.title}</label>
           <input
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             className="tm-input"
-            placeholder="Например: Ремонт кухни"
+            placeholder={copy.titlePlaceholder}
             maxLength={120}
           />
         </div>
         <div>
-          <label className="block text-sm tm-label mb-1">Описание</label>
+          <label className="block text-sm tm-label mb-1">{copy.description}</label>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             className="tm-input"
             rows={3}
-            placeholder="Коротко: что входит в проект"
+            placeholder={copy.descriptionPlaceholder}
           />
         </div>
         <div>
-          <label className="block text-sm tm-label mb-1">Статус</label>
+          <label className="block text-sm tm-label mb-1">{copy.status}</label>
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value as ProjectStatus)}
             className="tm-select"
           >
-            <option value="active">Активный</option>
-            <option value="paused">На паузе</option>
-            <option value="completed">Завершён</option>
-            <option value="archived">Архив</option>
+            <option value="active">{copy.statusLabels.active}</option>
+            <option value="paused">{copy.statusLabels.paused}</option>
+            <option value="completed">{copy.statusLabels.completed}</option>
+            <option value="archived">{copy.statusLabels.archived}</option>
           </select>
         </div>
         <div className="flex justify-end gap-2">
@@ -200,7 +347,7 @@ function ProjectModal({
             className="tm-button tm-button-ghost"
             disabled={saving}
           >
-            Отмена
+            {copy.cancel}
           </button>
           <button
             type="button"
@@ -208,7 +355,7 @@ function ProjectModal({
             className="tm-button tm-button-primary"
             disabled={saving}
           >
-            {saving ? 'Сохранение...' : 'Сохранить'}
+            {saving ? copy.saving : copy.save}
           </button>
         </div>
       </div>
@@ -229,6 +376,8 @@ function ProjectTaskModal({
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
+  const { locale } = useLocale();
+  const copy = PROJECTS_COPY[locale];
   return (
     <TaskEditorModal
       open={open && Boolean(project)}
@@ -237,7 +386,7 @@ function ProjectTaskModal({
       onClose={onClose}
       onSaved={onSaved}
       projects={project ? [project] : []}
-      modalTitle={task ? 'Редактировать задачу проекта' : 'Новая задача проекта'}
+      modalTitle={task ? copy.editProjectTask : copy.newProjectTask}
       defaultBucket="next"
       contextProject={project}
     />
@@ -273,6 +422,8 @@ function ProjectTaskRow({
   onDrop?: (event: DragEvent<HTMLDivElement>, taskId: string) => void;
   onDragEnd?: () => void;
 }) {
+  const { locale } = useLocale();
+  const copy = PROJECTS_COPY[locale];
   const deadlineLabel = formatDeadline(task.deadline);
   const taskValue = getTaskValue(task);
   const showUndo = status === 'completed';
@@ -291,19 +442,19 @@ function ProjectTaskRow({
           draggable={dragEnabled}
           onDragStart={(event) => onDragStart?.(event, task.id)}
           onDragEnd={onDragEnd}
-          title={dragEnabled ? 'Перетащить, чтобы изменить порядок' : undefined}
+          title={dragEnabled ? copy.dragHint : undefined}
         >
           {showDragGrip ? <span className="tm-project-task-grip" aria-hidden="true">↕</span> : null}
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="tm-task-title whitespace-normal break-words">{task.title}</h3>
-              {status === 'overdue' ? <span className="tm-badge tm-badge-danger">Просрочено</span> : null}
-              {status === 'missed' ? <span className="tm-badge tm-badge-danger">Пропущено</span> : null}
+              {status === 'overdue' ? <span className="tm-badge tm-badge-danger">{copy.overdue}</span> : null}
+              {status === 'missed' ? <span className="tm-badge tm-badge-danger">{copy.missed}</span> : null}
             </div>
             <p className="text-sm text-amber-200/80">
-              {QUEUE_LABELS[task.bucket]} · {PERIODICITY_LABELS[task.periodicity]} · Ценность {taskValue}
+              {copy.queueLabels[task.bucket]} · {copy.periodicityLabels[task.periodicity]} · {copy.value} {taskValue}
             </p>
-            {deadlineLabel ? <p className="text-xs text-amber-200/70">Дедлайн {deadlineLabel}</p> : null}
+            {deadlineLabel ? <p className="text-xs text-amber-200/70">{copy.deadline} {deadlineLabel}</p> : null}
             {task.comment ? (
               <p className="text-sm text-amber-100/90 whitespace-pre-wrap">{task.comment}</p>
             ) : null}
@@ -316,13 +467,14 @@ function ProjectTaskRow({
               onClick={() => onUndo(task)}
               className="tm-button tm-button-steel tm-button-sm"
             >
-              Undo
+              {copy.undo}
             </button>
           ) : (
             <button
               type="button"
               onClick={() => onComplete(task)}
               className="tm-button tm-button-primary tm-button-sm"
+              aria-label={`${copy.complete}: ${task.title}`}
             >
               ✓
             </button>
@@ -332,7 +484,7 @@ function ProjectTaskRow({
             onClick={() => onEdit(task)}
             className="tm-button tm-button-ghost tm-button-sm"
           >
-            Edit
+            {copy.edit}
           </button>
         </div>
       </div>
@@ -347,21 +499,52 @@ function ProjectCompletionModal({
   award: ProjectCompletionBonusAward | null;
   onClose: () => void;
 }) {
+  const { locale } = useLocale();
+  const copy = PROJECTS_COPY[locale];
+  const titleId = useId();
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!award || typeof document === 'undefined') return;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+    };
+  }, [award]);
+
+  useEffect(() => {
+    if (!award || typeof document === 'undefined') return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [award, onClose]);
+
   if (!award) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto z-[190]">
-      <div className="w-full max-w-md tm-panel p-6 shadow-xl space-y-4">
+      <div
+        className="w-full max-w-md tm-panel p-6 shadow-xl space-y-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold tm-title">Проект завершён</h2>
-          <p className="text-sm text-amber-200/80">Все задачи проекта закрыты.</p>
+          <h2 id={titleId} className="text-2xl font-semibold tm-title">{copy.projectCompleted}</h2>
+          <p className="text-sm text-amber-200/80">{copy.allTasksClosed}</p>
           <p className="text-base font-semibold text-emerald-300">
-            Бонус за завершение: +{award.bonusXp} XP
+            {copy.completionBonus(award.bonusXp)}
           </p>
         </div>
         <div className="flex justify-end">
           <button type="button" onClick={onClose} className="tm-button tm-button-primary">
-            Продолжить
+            {copy.continue}
           </button>
         </div>
       </div>
@@ -370,6 +553,8 @@ function ProjectCompletionModal({
 }
 
 export function ProjectsPage() {
+  const { locale } = useLocale();
+  const copy = PROJECTS_COPY[locale];
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskStatusById, setTaskStatusById] = useState<Record<string, TaskStatus>>({});
@@ -533,7 +718,7 @@ export function ProjectsPage() {
       await Promise.all(reorderedWithSort.map((task) => updateTask(task)));
       await load();
     } catch (error) {
-      await showAppAlert('Не удалось изменить порядок задач проекта.');
+      await showAppAlert(copy.reorderFailed);
       await load();
     }
   };
@@ -583,7 +768,7 @@ export function ProjectsPage() {
                     onClick={() => setSelectedProjectId(null)}
                     className="tm-button tm-button-ghost tm-button-sm"
                   >
-                    ← Projects
+                    {copy.back}
                   </button>
                   <div className="space-y-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -605,14 +790,14 @@ export function ProjectsPage() {
                     onClick={openCreateTask}
                     className="tm-button tm-button-primary"
                   >
-                    + Задача
+                    {copy.addTask}
                   </button>
                   <button
                     type="button"
                     onClick={() => openEditProject(selectedProject)}
                     className="tm-button tm-button-ghost"
                   >
-                    Изменить проект
+                    {copy.editProjectAction}
                   </button>
                 </div>
               </section>
@@ -621,11 +806,16 @@ export function ProjectsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-1">
                     <p className="text-sm text-amber-200/80">
-                      {getProjectCompletedCount(tasks, taskStatusById, selectedProject.id)} /{' '}
-                      {selectedProjectTasks.length} задач завершено
+                      {copy.completedCount(
+                        getProjectCompletedCount(tasks, taskStatusById, selectedProject.id),
+                        selectedProjectTasks.length
+                      )}
                     </p>
                     <p className="text-xs text-amber-200/70">
-                      Активных {selectedProjectActiveTasks.length} · Сделано {selectedProjectCompletedTasks.length}
+                      {copy.activeDone(
+                        selectedProjectActiveTasks.length,
+                        selectedProjectCompletedTasks.length
+                      )}
                     </p>
                   </div>
                   <p className="text-lg font-semibold tm-title">
@@ -640,14 +830,14 @@ export function ProjectsPage() {
               {selectedProjectDisplayStatus === 'completed' ? (
                 <section className="tm-panel-soft p-4 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold tm-title">Проект завершён</h2>
+                    <h2 className="text-lg font-semibold tm-title">{copy.projectCompleted}</h2>
                     <ProjectStatusBadge status="completed" />
                   </div>
-                  <p className="text-sm text-amber-200/80">Все задачи проекта закрыты.</p>
-                  <p className="text-xs text-amber-200/70">Прогресс: 100%</p>
+                  <p className="text-sm text-amber-200/80">{copy.allTasksClosed}</p>
+                  <p className="text-xs text-amber-200/70">{copy.progress}: 100%</p>
                   {typeof selectedProject.completionBonusXp === 'number' ? (
                     <p className="text-sm font-semibold text-emerald-300">
-                      Начислен бонус: +{selectedProject.completionBonusXp} XP
+                      {copy.bonusAwarded(selectedProject.completionBonusXp)}
                     </p>
                   ) : null}
                 </section>
@@ -655,7 +845,7 @@ export function ProjectsPage() {
 
               <section className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-xl font-semibold tm-title">Активные задачи</h2>
+                  <h2 className="text-xl font-semibold tm-title">{copy.activeTasks}</h2>
                   <span className="tm-badge tm-badge-note">{selectedProjectActiveTasks.length}</span>
                 </div>
                 {sortedSelectedActiveTasks.length > 0 ? (
@@ -688,7 +878,7 @@ export function ProjectsPage() {
                 ) : (
                   <div className="tm-panel-soft p-4">
                     <p className="text-sm text-amber-200/80">
-                      В проекте пока нет активных задач. Добавь первую и прогресс появится автоматически.
+                      {copy.emptyActive}
                     </p>
                   </div>
                 )}
@@ -696,7 +886,7 @@ export function ProjectsPage() {
 
               <section className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-xl font-semibold tm-title">Завершённые задачи</h2>
+                  <h2 className="text-xl font-semibold tm-title">{copy.completedTasks}</h2>
                   <span className="tm-badge tm-badge-note">{selectedProjectCompletedTasks.length}</span>
                 </div>
                 {sortedSelectedCompletedTasks.length > 0 ? (
@@ -719,7 +909,7 @@ export function ProjectsPage() {
                 ) : (
                   <div className="tm-panel-soft p-4">
                     <p className="text-sm text-amber-200/80">
-                      Пока ничего не закрыто. Когда завершишь первую задачу проекта, она появится здесь.
+                      {copy.emptyCompleted}
                     </p>
                   </div>
                 )}
@@ -731,7 +921,7 @@ export function ProjectsPage() {
                 <div>
                   <h1 className="sr-only">Projects</h1>
                   <p className="text-sm text-amber-200/80">
-                    Контейнеры для больших целей. Прогресс считается по обычным задачам.
+                    {copy.intro}
                   </p>
                 </div>
                 <button
@@ -739,19 +929,19 @@ export function ProjectsPage() {
                   onClick={openCreateProject}
                   className="tm-button tm-button-primary"
                 >
-                  + Проект
+                  {copy.addProject}
                 </button>
               </section>
 
               {loading ? (
                 <div className="tm-panel-soft p-4">
-                  <p className="text-amber-200/80">Загрузка проектов...</p>
+                  <p className="text-amber-200/80">{copy.loadingProjects}</p>
                 </div>
               ) : projects.length === 0 ? (
                 <div className="tm-panel-soft p-5 space-y-3">
-                  <h2 className="text-xl font-semibold tm-title">Пока нет Projects</h2>
+                  <h2 className="text-xl font-semibold tm-title">{copy.emptyTitle}</h2>
                   <p className="text-sm text-amber-200/80">
-                    Создай проект, а потом привязывай к нему обычные задачи. Прогресс будет считаться автоматически.
+                    {copy.emptyText}
                   </p>
                   <div>
                     <button
@@ -759,7 +949,7 @@ export function ProjectsPage() {
                       onClick={openCreateProject}
                       className="tm-button tm-button-primary"
                     >
-                      Создать проект
+                      {copy.createProject}
                     </button>
                   </div>
                 </div>
@@ -791,11 +981,11 @@ export function ProjectsPage() {
                               </p>
                             ) : null}
                             <p className="text-sm text-amber-200/80">
-                              {completedCount} / {totalTasks} задач завершено
+                              {copy.completedCount(completedCount, totalTasks)}
                             </p>
                             <ProjectProgressBar value={progress} />
                           </div>
-                          <span className="tm-button tm-button-ghost tm-button-sm">Открыть</span>
+                          <span className="tm-button tm-button-ghost tm-button-sm">{copy.open}</span>
                         </div>
                       </button>
                     );
@@ -835,7 +1025,7 @@ export function ProjectsPage() {
 
       {busyTaskId ? (
         <div className="tm-project-busy-toast" role="status" aria-live="polite">
-          Обновляем задачу...
+          {copy.updatingTask}
         </div>
       ) : null}
     </div>

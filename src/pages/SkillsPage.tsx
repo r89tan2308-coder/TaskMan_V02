@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { getAppMetaValue, setAppMetaValue } from '../db/repositories/appMetaRepo';
 
 type WheelSegment = {
@@ -292,6 +292,30 @@ function StatsEditorModal({
   onSave: () => void;
   saving: boolean;
 }) {
+  const titleId = useId();
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || saving || typeof document === 'undefined') return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, open, saving]);
+
   if (!open) return null;
   const showGoals = Boolean(goals && onGoalChange && typeof maxGoal === 'number');
   const showNotes = Boolean(notes && onNoteChange);
@@ -299,9 +323,14 @@ function StatsEditorModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center px-4">
-      <div className="w-full max-w-3xl tm-panel p-6 shadow-xl space-y-4">
+      <div
+        className="w-full max-w-3xl tm-panel p-6 shadow-xl space-y-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold tm-title">{title}</h2>
+          <h2 id={titleId} className="text-xl font-semibold tm-title">{title}</h2>
           <button onClick={onClose} className="tm-button tm-button-ghost">
             Закрыть
           </button>
@@ -440,6 +469,8 @@ export function SkillsPage() {
   const [draftNotesSkills, setDraftNotesSkills] = useState<Record<string, string>>({});
   const [expandedCharacteristicId, setExpandedCharacteristicId] = useState<string | null>(null);
   const [expandedSkillId, setExpandedSkillId] = useState<string | null>(null);
+  const wheelEditorReturnFocusRef = useRef<HTMLElement | null>(null);
+  const wheelEditorTitleId = 'tm-skills-wheel-editor-title';
 
   useEffect(() => {
     const load = async () => {
@@ -495,6 +526,27 @@ export function SkillsPage() {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    if (!editing || typeof document === 'undefined') return;
+    wheelEditorReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      wheelEditorReturnFocusRef.current?.focus();
+      wheelEditorReturnFocusRef.current = null;
+    };
+  }, [editing]);
+
+  useEffect(() => {
+    if (!editing || saving || typeof document === 'undefined') return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeEditor();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [editing, saving]);
 
   const coloredSegments = useMemo(() => {
     return segments.map((segment, index) => {
@@ -1194,9 +1246,14 @@ export function SkillsPage() {
 
       {editing ? (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center px-4">
-          <div className="w-full max-w-3xl tm-panel p-6 shadow-xl space-y-4">
+          <div
+            className="w-full max-w-3xl tm-panel p-6 shadow-xl space-y-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={wheelEditorTitleId}
+          >
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold tm-title">Редактировать колесо баланса</h2>
+              <h2 id={wheelEditorTitleId} className="text-xl font-semibold tm-title">Редактировать колесо баланса</h2>
               <button onClick={closeEditor} className="tm-button tm-button-ghost">
                 Закрыть
               </button>

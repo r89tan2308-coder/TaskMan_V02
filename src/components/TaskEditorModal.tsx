@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Project } from '../entities/project/types';
 import type {
   AllowedWeekday,
@@ -9,14 +9,13 @@ import type {
   TaskChecklistItem
 } from '../entities/task/types';
 import {
-  WEEKDAY_LABELS_SHORT,
   WEEKDAY_WEEKENDS,
   WEEKDAY_WORKDAYS,
-  formatAllowedWeekdaysLabel,
   normalizeAllowedWeekdays
 } from '../entities/task/weekdays';
 import { createProject } from '../services/projectsService';
 import { createTask, updateTask } from '../services/tasksService';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 import { showAppAlert } from './AppDialog';
 
 const MAX_TASK_TITLE_LENGTH = 120;
@@ -25,20 +24,199 @@ const NEW_PROJECT_OPTION_VALUE = '__new__';
 
 const TODAY_QUEUE_TABS: TaskBucket[] = ['today', 'inbox', 'next', 'backlog'];
 
-const QUEUE_LABELS: Record<TaskBucket, string> = {
-  today: 'Today',
-  inbox: 'Inbox',
-  next: 'Next',
-  backlog: 'Backlog'
-};
+type TaskEditorMode = 'create' | 'edit';
+type EditorChip = 'project' | 'repeat' | 'checklist' | 'deadline' | 'progress' | 'skills' | 'comment';
 
-const PERIODICITY_LABELS: Record<Periodicity, string> = {
-  daily: 'Ежедневно',
-  weekly: 'Раз в неделю',
-  'one-time': 'Разово',
-  monthly: 'Раз в месяц',
-  yearly: 'Раз в год'
-};
+const TASK_EDITOR_COPY = {
+  ru: {
+    editTitle: 'Редактировать задачу',
+    createTitle: 'Новая задача',
+    titleLabel: 'Название',
+    titlePlaceholder: 'Например: Сделать тренировку',
+    queue: 'Очередь',
+    rarity: 'Редкость',
+    value: 'Ценность',
+    queueLabels: {
+      today: 'Сегодня',
+      inbox: 'Входящие',
+      next: 'Далее',
+      backlog: 'Запас'
+    },
+    rarityLabels: {
+      common: 'Обычная',
+      rare: 'Редкая',
+      epic: 'Эпическая',
+      legendary: 'Легендарная'
+    },
+    periodicityLabels: {
+      daily: 'Ежедневно',
+      weekly: 'Раз в неделю',
+      'one-time': 'Разово',
+      monthly: 'Раз в месяц',
+      yearly: 'Раз в год'
+    },
+    chipLabels: {
+      project: 'Проект',
+      repeat: 'Повтор',
+      checklist: 'Чеклист',
+      deadline: 'Срок',
+      progress: 'Прогресс',
+      skills: 'Навыки',
+      comment: 'Коммент'
+    },
+    yes: 'есть',
+    no: 'нет',
+    draft: 'черновик',
+    remind: 'напомнить',
+    new: 'Новый',
+    noProject: 'Без проекта',
+    newProject: '+ Новый проект',
+    projectTitle: 'Название проекта',
+    projectTitlePlaceholder: 'Например: Подготовка к отпуску',
+    projectDescription: 'Описание проекта',
+    projectDescriptionPlaceholder: 'Коротко: что сюда входит',
+    periodicity: 'Периодичность',
+    quota: 'Квота',
+    quotaPlaceholder: 'Например: 3',
+    quotaPeriod: 'Период квоты',
+    week: 'Неделя',
+    month: 'Месяц',
+    weekdays: 'Дни выполнения',
+    anyDay: 'Любой день',
+    workdays: 'Будни',
+    weekends: 'Выходные',
+    weekdayHint: 'Оставь без выбора, если задачу можно делать в любой день.',
+    weekdayShortLabels: {
+      1: 'Пн',
+      2: 'Вт',
+      3: 'Ср',
+      4: 'Чт',
+      5: 'Пт',
+      6: 'Сб',
+      0: 'Вс'
+    },
+    checklistItems: (count: number) => `${count} пунктов`,
+    noChecklistItems: 'Пунктов пока нет.',
+    checklistNewItems: 'Новые пункты, по одному на строку',
+    checklistPlaceholder: '- купить продукты\n- приготовить ужин',
+    add: 'Добавить',
+    remove: 'Удалить',
+    deadline: 'Срок',
+    reminderMinutes: 'Напомнить за, мин.',
+    reminderPlaceholder: 'Например: 60',
+    reminderHint: 'Напоминание работает только со сроком.',
+    trackProgress: 'Отслеживать прогресс',
+    progressHint: 'Включи, если задаче нужен процент выполнения.',
+    skills: 'Навыки',
+    skillsPlaceholder: 'Например: Готовка, Excel',
+    commaSeparated: 'Через запятую.',
+    comment: 'Комментарий',
+    commentPlaceholder: 'Например: детали, на что обратить внимание',
+    contextProject: (title: string) => `Проект: ${title}`,
+    extraOptionsAria: 'Дополнительные параметры задачи',
+    cancel: 'Отмена',
+    saving: 'Сохранение...',
+    save: 'Сохранить',
+    create: 'Создать',
+    projectTitleRequired: 'Введите название проекта.',
+    saveFailed: 'Не удалось сохранить задачу.'
+  },
+  en: {
+    editTitle: 'Edit Task',
+    createTitle: 'New Task',
+    titleLabel: 'Title',
+    titlePlaceholder: 'Example: Do a workout',
+    queue: 'Queue',
+    rarity: 'Rarity',
+    value: 'Value',
+    queueLabels: {
+      today: 'Today',
+      inbox: 'Inbox',
+      next: 'Next',
+      backlog: 'Backlog'
+    },
+    rarityLabels: {
+      common: 'Common',
+      rare: 'Rare',
+      epic: 'Epic',
+      legendary: 'Legendary'
+    },
+    periodicityLabels: {
+      daily: 'Daily',
+      weekly: 'Weekly',
+      'one-time': 'One-time',
+      monthly: 'Monthly',
+      yearly: 'Yearly'
+    },
+    chipLabels: {
+      project: 'Project',
+      repeat: 'Repeat',
+      checklist: 'Checklist',
+      deadline: 'Due',
+      progress: 'Progress',
+      skills: 'Skills',
+      comment: 'Comment'
+    },
+    yes: 'yes',
+    no: 'none',
+    draft: 'draft',
+    remind: 'reminder',
+    new: 'New',
+    noProject: 'No project',
+    newProject: '+ New project',
+    projectTitle: 'Project title',
+    projectTitlePlaceholder: 'Example: Vacation prep',
+    projectDescription: 'Project description',
+    projectDescriptionPlaceholder: 'Shortly: what belongs here',
+    periodicity: 'Periodicity',
+    quota: 'Quota',
+    quotaPlaceholder: 'Example: 3',
+    quotaPeriod: 'Quota period',
+    week: 'Week',
+    month: 'Month',
+    weekdays: 'Allowed days',
+    anyDay: 'Any day',
+    workdays: 'Workdays',
+    weekends: 'Weekends',
+    weekdayHint: 'Leave empty if the task can be done on any day.',
+    weekdayShortLabels: {
+      1: 'Mon',
+      2: 'Tue',
+      3: 'Wed',
+      4: 'Thu',
+      5: 'Fri',
+      6: 'Sat',
+      0: 'Sun'
+    },
+    checklistItems: (count: number) => `${count} item${count === 1 ? '' : 's'}`,
+    noChecklistItems: 'No items yet.',
+    checklistNewItems: 'New items, one per line',
+    checklistPlaceholder: '- buy groceries\n- cook dinner',
+    add: 'Add',
+    remove: 'Remove',
+    deadline: 'Due date',
+    reminderMinutes: 'Remind before, min.',
+    reminderPlaceholder: 'Example: 60',
+    reminderHint: 'Reminder works only when a due date is set.',
+    trackProgress: 'Track progress',
+    progressHint: 'Enable this when the task needs a completion percentage.',
+    skills: 'Skills',
+    skillsPlaceholder: 'Example: Cooking, Excel',
+    commaSeparated: 'Comma-separated.',
+    comment: 'Comment',
+    commentPlaceholder: 'Example: details, what to pay attention to',
+    contextProject: (title: string) => `Project: ${title}`,
+    extraOptionsAria: 'Additional task options',
+    cancel: 'Cancel',
+    saving: 'Saving...',
+    save: 'Save',
+    create: 'Create',
+    projectTitleRequired: 'Enter a project title.',
+    saveFailed: 'Failed to save task.'
+  }
+} satisfies Record<AppLocale, unknown>;
+
+type TaskEditorCopy = (typeof TASK_EDITOR_COPY)[AppLocale];
 
 const clampProgressValue = (value: number) => Math.min(100, Math.max(0, value));
 
@@ -193,12 +371,16 @@ function SkillTagsInput({
   onChange,
   suggestions,
   disabled,
+  label,
+  hint,
   placeholder
 }: {
   value: string;
   onChange: (value: string) => void;
   suggestions: string[];
   disabled?: boolean;
+  label: string;
+  hint: string;
   placeholder?: string;
 }) {
   const [focused, setFocused] = useState(false);
@@ -229,7 +411,7 @@ function SkillTagsInput({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm tm-label mb-1">Навыки</label>
+      <label className="block text-sm tm-label mb-1">{label}</label>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -262,7 +444,7 @@ function SkillTagsInput({
           ))}
         </div>
       ) : null}
-      <p className="text-xs text-amber-200/70">Через запятую.</p>
+      <p className="text-xs text-amber-200/70">{hint}</p>
     </div>
   );
 }
@@ -270,13 +452,18 @@ function SkillTagsInput({
 function WeekdaySelector({
   value,
   onChange,
-  disabled
+  disabled,
+  copy
 }: {
   value?: AllowedWeekday[];
   onChange: (value: AllowedWeekday[] | undefined) => void;
   disabled?: boolean;
+  copy: TaskEditorCopy;
 }) {
   const normalizedValue = normalizeAllowedWeekdays(value);
+  const weekdaySummary = normalizedValue
+    ? normalizedValue.map((weekday) => copy.weekdayShortLabels[weekday]).join(', ')
+    : copy.anyDay;
 
   const toggleWeekday = (weekday: AllowedWeekday) => {
     const current = normalizedValue ?? [];
@@ -289,9 +476,9 @@ function WeekdaySelector({
   return (
     <div className="tm-weekday-selector space-y-2">
       <div className="tm-weekday-selector-head flex items-center justify-between gap-3">
-        <label className="block text-sm tm-label">Дни выполнения</label>
+        <label className="block text-sm tm-label">{copy.weekdays}</label>
         <span className="text-xs text-amber-200/70">
-          {formatAllowedWeekdaysLabel(normalizedValue)}
+          {weekdaySummary}
         </span>
       </div>
       <div className="tm-weekday-quick-row flex flex-wrap gap-2">
@@ -303,7 +490,7 @@ function WeekdaySelector({
           onClick={() => onChange(undefined)}
           disabled={disabled}
         >
-          Любой день
+          {copy.anyDay}
         </button>
         <button
           type="button"
@@ -315,7 +502,7 @@ function WeekdaySelector({
           onClick={() => onChange(WEEKDAY_WORKDAYS)}
           disabled={disabled}
         >
-          Будни
+          {copy.workdays}
         </button>
         <button
           type="button"
@@ -327,11 +514,11 @@ function WeekdaySelector({
           onClick={() => onChange(WEEKDAY_WEEKENDS)}
           disabled={disabled}
         >
-          Выходные
+          {copy.weekends}
         </button>
       </div>
       <div className="tm-weekday-buttons flex flex-wrap gap-2">
-        {(Object.entries(WEEKDAY_LABELS_SHORT) as Array<[string, string]>).map(([weekday, label]) => {
+        {(Object.entries(copy.weekdayShortLabels) as Array<[string, string]>).map(([weekday, label]) => {
           const numericWeekday = Number(weekday) as AllowedWeekday;
           const active = normalizedValue?.includes(numericWeekday) ?? false;
           return (
@@ -348,24 +535,11 @@ function WeekdaySelector({
         })}
       </div>
       <p className="tm-weekday-hint text-xs text-amber-200/70">
-        Оставь без выбора, если задачу можно делать в любой день.
+        {copy.weekdayHint}
       </p>
     </div>
   );
 }
-
-type TaskEditorMode = 'create' | 'edit';
-type EditorChip = 'project' | 'repeat' | 'checklist' | 'deadline' | 'progress' | 'skills' | 'comment';
-
-const EDITOR_CHIP_LABELS: Record<EditorChip, string> = {
-  project: 'Проект',
-  repeat: 'Повтор',
-  checklist: 'Чеклист',
-  deadline: 'Срок',
-  progress: 'Прогресс',
-  skills: 'Навыки',
-  comment: 'Коммент'
-};
 
 export function TaskEditorModal({
   open,
@@ -390,6 +564,8 @@ export function TaskEditorModal({
   defaultBucket?: TaskBucket;
   contextProject?: Project | null;
 }) {
+  const { locale } = useLocale();
+  const copy = TASK_EDITOR_COPY[locale];
   const isEditMode = mode === 'edit';
   const activeTask = task ?? null;
   const [title, setTitle] = useState('');
@@ -414,6 +590,8 @@ export function TaskEditorModal({
   const [saving, setSaving] = useState(false);
   const [activeChip, setActiveChip] = useState<EditorChip | null>(null);
   const savingRef = useRef(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
   const portalThemeClassName = getPortalThemeClassName();
 
   useEffect(() => {
@@ -502,12 +680,35 @@ export function TaskEditorModal({
     savingRef.current = false;
   }, [activeTask, contextProject?.id, defaultBucket, isEditMode, open]);
 
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !savingRef.current) {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, open]);
+
   if (!open) return null;
   if (isEditMode && !activeTask) return null;
 
   const projectOptions = projects.filter((project) => project.status !== 'archived');
   const resolvedTitle =
-    modalTitle ?? (isEditMode ? 'Редактировать задачу' : 'Новая задача');
+    locale === 'ru' && modalTitle ? modalTitle : isEditMode ? copy.editTitle : copy.createTitle;
 
   const addChecklistItems = () => {
     const parsed = parseChecklistInput(checklistAddInput);
@@ -552,7 +753,7 @@ export function TaskEditorModal({
     }
     const trimmedProjectTitle = newProjectTitle.trim();
     if (!trimmedProjectTitle) {
-      throw new Error('Введите название проекта.');
+      throw new Error(copy.projectTitleRequired);
     }
     return createProject({
       title: trimmedProjectTitle,
@@ -639,7 +840,7 @@ export function TaskEditorModal({
       await onSaved();
       onClose();
     } catch (error) {
-      await showAppAlert(error instanceof Error ? error.message : 'Не удалось сохранить задачу.');
+      await showAppAlert(error instanceof Error ? error.message : copy.saveFailed);
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -685,49 +886,49 @@ export function TaskEditorModal({
       ? [
           {
             id: 'project' as const,
-            label: EDITOR_CHIP_LABELS.project,
+            label: copy.chipLabels.project,
             summary:
               projectSelection === NEW_PROJECT_OPTION_VALUE
-                ? newProjectTitle.trim() || 'Новый'
-                : selectedProject?.title ?? 'Без проекта',
+                ? newProjectTitle.trim() || copy.new
+                : selectedProject?.title ?? copy.noProject,
             filled: projectFilled
           }
         ]
       : []),
     {
       id: 'comment',
-      label: EDITOR_CHIP_LABELS.comment,
-      summary: commentFilled ? 'есть' : 'нет',
+      label: copy.chipLabels.comment,
+      summary: commentFilled ? copy.yes : copy.no,
       filled: commentFilled
     },
     {
       id: 'repeat',
-      label: EDITOR_CHIP_LABELS.repeat,
-      summary: repeatFilled ? PERIODICITY_LABELS[effectivePeriodicity] : 'Разово',
+      label: copy.chipLabels.repeat,
+      summary: repeatFilled ? copy.periodicityLabels[effectivePeriodicity] : copy.periodicityLabels['one-time'],
       filled: repeatFilled
     },
     {
       id: 'checklist',
-      label: EDITOR_CHIP_LABELS.checklist,
-      summary: checklistDraft.length > 0 ? `${checklistDraft.length}` : checklistAddInput.trim() ? 'черновик' : 'нет',
+      label: copy.chipLabels.checklist,
+      summary: checklistDraft.length > 0 ? `${checklistDraft.length}` : checklistAddInput.trim() ? copy.draft : copy.no,
       filled: checklistFilled
     },
     {
       id: 'deadline',
-      label: EDITOR_CHIP_LABELS.deadline,
-      summary: deadlineInput ? 'есть' : reminderInput.trim() ? 'напомнить' : 'нет',
+      label: copy.chipLabels.deadline,
+      summary: deadlineInput ? copy.yes : reminderInput.trim() ? copy.remind : copy.no,
       filled: deadlineFilled
     },
     {
       id: 'progress',
-      label: EDITOR_CHIP_LABELS.progress,
-      summary: progressEnabled ? `${progressValue}%` : 'нет',
+      label: copy.chipLabels.progress,
+      summary: progressEnabled ? `${progressValue}%` : copy.no,
       filled: progressFilled
     },
     {
       id: 'skills',
-      label: EDITOR_CHIP_LABELS.skills,
-      summary: skillTagCount > 0 ? `${skillTagCount}` : 'нет',
+      label: copy.chipLabels.skills,
+      summary: skillTagCount > 0 ? `${skillTagCount}` : copy.no,
       filled: skillsFilled
     }
   ];
@@ -738,42 +939,42 @@ export function TaskEditorModal({
         return contextProject ? null : (
           <div className="space-y-3">
             <div>
-              <label className="block text-sm tm-label mb-1">Проект</label>
+              <label className="block text-sm tm-label mb-1">{copy.chipLabels.project}</label>
               <select
                 value={projectSelection}
                 onChange={(event) => setProjectSelection(event.target.value)}
                 className="tm-select"
                 disabled={saving}
               >
-                <option value="">Без проекта</option>
+                <option value="">{copy.noProject}</option>
                 {projectOptions.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.title}
                   </option>
                 ))}
-                <option value={NEW_PROJECT_OPTION_VALUE}>+ Новый проект</option>
+                <option value={NEW_PROJECT_OPTION_VALUE}>{copy.newProject}</option>
               </select>
             </div>
             {projectSelection === NEW_PROJECT_OPTION_VALUE ? (
               <div className="tm-editor-subpanel space-y-3">
                 <div>
-                  <label className="block text-xs tm-label mb-1">Название проекта</label>
+                  <label className="block text-xs tm-label mb-1">{copy.projectTitle}</label>
                   <input
                     value={newProjectTitle}
                     onChange={(event) => setNewProjectTitle(event.target.value)}
                     className="tm-input"
-                    placeholder="Например: Подготовка к отпуску"
+                    placeholder={copy.projectTitlePlaceholder}
                     disabled={saving}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs tm-label mb-1">Описание проекта</label>
+                  <label className="block text-xs tm-label mb-1">{copy.projectDescription}</label>
                   <textarea
                     value={newProjectDescription}
                     onChange={(event) => setNewProjectDescription(event.target.value)}
                     className="tm-input"
                     rows={2}
-                    placeholder="Коротко: что сюда входит"
+                    placeholder={copy.projectDescriptionPlaceholder}
                     disabled={saving}
                   />
                 </div>
@@ -786,22 +987,22 @@ export function TaskEditorModal({
           <div className="space-y-3">
             <div className="tm-editor-repeat-grid">
               <div className="sm:col-span-1">
-                <label className="block text-sm tm-label mb-1">Периодичность</label>
+                <label className="block text-sm tm-label mb-1">{copy.periodicity}</label>
                 <select
                   value={periodicity}
                   onChange={(event) => setPeriodicity(event.target.value as Periodicity)}
                   className="tm-select"
                   disabled={saving}
                 >
-                  {(Object.keys(PERIODICITY_LABELS) as Periodicity[]).map((item) => (
+                  {(Object.keys(copy.periodicityLabels) as Periodicity[]).map((item) => (
                     <option key={item} value={item}>
-                      {PERIODICITY_LABELS[item]}
+                      {copy.periodicityLabels[item]}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm tm-label mb-1">Квота</label>
+                <label className="block text-sm tm-label mb-1">{copy.quota}</label>
                 <input
                   type="number"
                   min={1}
@@ -809,20 +1010,20 @@ export function TaskEditorModal({
                   value={quotaCount}
                   onChange={(event) => setQuotaCount(event.target.value)}
                   className="tm-input"
-                  placeholder="Например: 3"
+                  placeholder={copy.quotaPlaceholder}
                   disabled={saving}
                 />
               </div>
               <div>
-                <label className="block text-sm tm-label mb-1">Период квоты</label>
+                <label className="block text-sm tm-label mb-1">{copy.quotaPeriod}</label>
                 <select
                   value={quotaPer}
                   onChange={(event) => setQuotaPer(event.target.value as 'week' | 'month')}
                   className="tm-select"
                   disabled={saving}
                 >
-                  <option value="week">Неделя</option>
-                  <option value="month">Месяц</option>
+                  <option value="week">{copy.week}</option>
+                  <option value="month">{copy.month}</option>
                 </select>
               </div>
             </div>
@@ -830,6 +1031,7 @@ export function TaskEditorModal({
               value={allowedWeekdays}
               onChange={handleAllowedWeekdaysChange}
               disabled={saving}
+              copy={copy}
             />
           </div>
         );
@@ -837,8 +1039,8 @@ export function TaskEditorModal({
         return (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3">
-              <p className="tm-label text-sm">Чеклист</p>
-              <span className="text-xs text-amber-200/70">{checklistDraft.length} пунктов</span>
+              <p className="tm-label text-sm">{copy.chipLabels.checklist}</p>
+              <span className="text-xs text-amber-200/70">{copy.checklistItems(checklistDraft.length)}</span>
             </div>
             {checklistDraft.length > 0 ? (
               <div className="space-y-2">
@@ -863,24 +1065,24 @@ export function TaskEditorModal({
                       className="tm-button tm-button-ghost tm-button-sm"
                       disabled={saving}
                     >
-                      Удалить
+                      {copy.remove}
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-amber-200/70">Пунктов пока нет.</p>
+              <p className="text-xs text-amber-200/70">{copy.noChecklistItems}</p>
             )}
             <div className="space-y-2">
               <label className="block text-xs tm-label">
-                Новые пункты, по одному на строку
+                {copy.checklistNewItems}
               </label>
               <textarea
                 value={checklistAddInput}
                 onChange={(event) => setChecklistAddInput(event.target.value)}
                 className="tm-input"
                 rows={3}
-                placeholder="- купить продукты&#10;- приготовить ужин"
+                placeholder={copy.checklistPlaceholder}
                 disabled={saving}
               />
               <div className="flex justify-end">
@@ -890,7 +1092,7 @@ export function TaskEditorModal({
                   className="tm-button tm-button-ghost tm-button-sm"
                   disabled={saving || checklistAddInput.trim().length === 0}
                 >
-                  Добавить
+                  {copy.add}
                 </button>
               </div>
             </div>
@@ -900,7 +1102,7 @@ export function TaskEditorModal({
         return (
           <div className="tm-editor-deadline-grid">
             <div>
-              <label className="block text-sm tm-label mb-1">Срок</label>
+              <label className="block text-sm tm-label mb-1">{copy.deadline}</label>
               <input
                 type="datetime-local"
                 value={deadlineInput}
@@ -910,7 +1112,7 @@ export function TaskEditorModal({
               />
             </div>
             <div>
-              <label className="block text-sm tm-label mb-1">Напомнить за, мин.</label>
+              <label className="block text-sm tm-label mb-1">{copy.reminderMinutes}</label>
               <input
                 type="number"
                 min={0}
@@ -918,12 +1120,12 @@ export function TaskEditorModal({
                 value={reminderInput}
                 onChange={(event) => setReminderInput(event.target.value)}
                 className="tm-input"
-                placeholder="Например: 60"
+                placeholder={copy.reminderPlaceholder}
                 disabled={saving}
               />
             </div>
             <p className="tm-editor-hint text-xs text-amber-200/70">
-              Напоминание работает только со сроком.
+              {copy.reminderHint}
             </p>
           </div>
         );
@@ -938,7 +1140,7 @@ export function TaskEditorModal({
                 className="h-4 w-4 accent-amber-500"
                 disabled={saving}
               />
-              Отслеживать прогресс
+              {copy.trackProgress}
             </label>
             {progressEnabled ? (
               <TaskProgressControls
@@ -947,7 +1149,7 @@ export function TaskEditorModal({
                 disabled={saving}
               />
             ) : (
-              <p className="text-xs text-amber-200/70">Включи, если задаче нужен процент выполнения.</p>
+              <p className="text-xs text-amber-200/70">{copy.progressHint}</p>
             )}
           </div>
         );
@@ -958,19 +1160,21 @@ export function TaskEditorModal({
             onChange={setSkillTagsInput}
             suggestions={skillOptions}
             disabled={saving}
-            placeholder="Например: Готовка, Excel"
+            label={copy.skills}
+            hint={copy.commaSeparated}
+            placeholder={copy.skillsPlaceholder}
           />
         );
       case 'comment':
         return (
           <div>
-            <label className="block text-sm tm-label mb-1">Комментарий</label>
+            <label className="block text-sm tm-label mb-1">{copy.comment}</label>
             <textarea
               value={comment}
               onChange={(event) => setComment(event.target.value)}
               className="tm-input"
               rows={4}
-              placeholder="Например: детали, на что обратить внимание"
+              placeholder={copy.commentPlaceholder}
               disabled={saving}
             />
           </div>
@@ -984,29 +1188,32 @@ export function TaskEditorModal({
     <div className="tm-modal-overlay tm-task-editor-overlay fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
       <div
         className={`w-full max-w-lg tm-panel tm-task-editor-modal ${portalThemeClassName} p-4 sm:p-5 shadow-xl max-h-[85vh] overflow-hidden flex flex-col`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
       >
         <div className="tm-editor-header">
-          <h2 className="text-xl font-semibold tm-title">{resolvedTitle}</h2>
+          <h2 id={titleId} className="text-xl font-semibold tm-title">{resolvedTitle}</h2>
           {contextProject ? (
-            <p className="text-xs text-amber-200/70">Проект: {contextProject.title}</p>
+            <p className="text-xs text-amber-200/70">{copy.contextProject(contextProject.title)}</p>
           ) : null}
         </div>
         <div className="tm-editor-body overflow-y-auto pr-1 flex-1 min-h-0">
           <div className="tm-editor-core">
-            <label className="block text-sm tm-label mb-1">Название</label>
+            <label className="block text-sm tm-label mb-1">{copy.titleLabel}</label>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value.slice(0, MAX_TASK_TITLE_LENGTH))}
               className="tm-input"
               maxLength={MAX_TASK_TITLE_LENGTH}
-              placeholder="Например: Сделать тренировку"
+              placeholder={copy.titlePlaceholder}
               disabled={saving}
             />
           </div>
 
           <div className="tm-editor-core-grid">
             <div>
-              <label className="block text-sm tm-label mb-1">Очередь</label>
+              <label className="block text-sm tm-label mb-1">{copy.queue}</label>
               <select
                 value={bucket}
                 onChange={(event) => setBucket(event.target.value as TaskBucket)}
@@ -1015,27 +1222,27 @@ export function TaskEditorModal({
               >
                 {TODAY_QUEUE_TABS.map((queue) => (
                   <option key={queue} value={queue}>
-                    {QUEUE_LABELS[queue]}
+                    {copy.queueLabels[queue]}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm tm-label mb-1">Редкость</label>
+              <label className="block text-sm tm-label mb-1">{copy.rarity}</label>
               <select
                 value={rarity}
                 onChange={(event) => setRarity(event.target.value as Rarity)}
                 className="tm-select"
                 disabled={saving}
               >
-                <option value="common">Common</option>
-                <option value="rare">Rare</option>
-                <option value="epic">Epic</option>
-                <option value="legendary">Legendary</option>
+                <option value="common">{copy.rarityLabels.common}</option>
+                <option value="rare">{copy.rarityLabels.rare}</option>
+                <option value="epic">{copy.rarityLabels.epic}</option>
+                <option value="legendary">{copy.rarityLabels.legendary}</option>
               </select>
             </div>
             <div className="tm-editor-value-control">
-              <label className="block text-sm tm-label">Ценность</label>
+              <label className="block text-sm tm-label">{copy.value}</label>
               <span className="text-sm text-amber-100">{value}</span>
               <input
                 type="range"
@@ -1054,7 +1261,7 @@ export function TaskEditorModal({
             </div>
           </div>
 
-          <div className="tm-editor-chip-row" aria-label="Дополнительные параметры задачи">
+          <div className="tm-editor-chip-row" aria-label={copy.extraOptionsAria}>
             {editorChips.map((chip) => (
               <button
                 key={chip.id}
@@ -1086,7 +1293,7 @@ export function TaskEditorModal({
             className="tm-button tm-button-ghost"
             disabled={saving}
           >
-            Отмена
+            {copy.cancel}
           </button>
           <button
             type="button"
@@ -1094,7 +1301,7 @@ export function TaskEditorModal({
             className="tm-button tm-button-primary"
             disabled={saving}
           >
-            {saving ? 'Сохранение...' : isEditMode ? 'Сохранить' : 'Создать'}
+            {saving ? copy.saving : isEditMode ? copy.save : copy.create}
           </button>
         </div>
       </div>

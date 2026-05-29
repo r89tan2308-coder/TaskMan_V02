@@ -5,6 +5,30 @@ import { Task } from '../entities/task/types';
 import { listTasks } from '../services/tasksService';
 import { logTaskEvent } from '../services/taskEventService';
 import { showAppAlert } from '../components/AppDialog';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
+
+const DAILY_LOG_COPY = {
+  ru: {
+    title: 'Дневник',
+    back: 'Назад в настройки',
+    today: 'Сегодня',
+    history: 'История',
+    loading: 'Загрузка...',
+    noTasks: 'Нет задач для логирования.',
+    noEntries: 'Записей пока нет.',
+    invalidDate: 'Укажите корректную дату и время события.'
+  },
+  en: {
+    title: 'Daily Log',
+    back: 'Back to Settings',
+    today: 'Today',
+    history: 'History',
+    loading: 'Loading...',
+    noTasks: 'No tasks to log.',
+    noEntries: 'No entries yet.',
+    invalidDate: 'Enter a valid event date and time.'
+  }
+} satisfies Record<AppLocale, unknown>;
 
 const PERIODICITY_LABELS: Record<Task['periodicity'], string> = {
   daily: 'Ежедневно',
@@ -100,7 +124,9 @@ type DailyLogDay = {
   items: DailyLogItem[];
 };
 
-export function DailyLogPage() {
+export function DailyLogPage({ onBack }: { onBack: () => void }) {
+  const { locale } = useLocale();
+  const copy = DAILY_LOG_COPY[locale];
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<LedgerEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,7 +223,7 @@ export function DailyLogPage() {
   const logTask = async (task: Task, missed: boolean) => {
     const occurredAt = resolveLogOccurredAt();
     if (occurredAt === null) {
-      await showAppAlert('Укажите корректную дату и время события.');
+      await showAppAlert(copy.invalidDate);
       return;
     }
     setLoggingTaskId(task.id);
@@ -213,11 +239,16 @@ export function DailyLogPage() {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-2 sm:px-4 py-8">
         <div className="tm-frame tm-reveal space-y-6 p-3 sm:p-6">
-          <h1 className="text-3xl font-semibold tm-title">Daily Log</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-3xl font-semibold tm-title">{copy.title}</h1>
+            <button type="button" onClick={onBack} className="tm-button tm-button-steel">
+              {copy.back}
+            </button>
+          </div>
 
           <section className="tm-panel tm-reveal tm-reveal-delay-1 p-4 space-y-3">
             <div className="tm-history-header">
-              <h2 className="text-lg font-semibold tm-title">Сегодня</h2>
+              <h2 className="text-lg font-semibold tm-title">{copy.today}</h2>
             </div>
             <div className="tm-panel-soft p-3 space-y-2">
               <label className="flex items-center gap-2 text-sm text-amber-200/90">
@@ -253,9 +284,9 @@ export function DailyLogPage() {
               </p>
             </div>
             {loading ? (
-              <p className="text-amber-200/80">Загрузка...</p>
+              <p className="text-amber-200/80">{copy.loading}</p>
             ) : tasks.length === 0 ? (
-              <p className="text-amber-200/80">Нет задач для логирования.</p>
+              <p className="text-amber-200/80">{copy.noTasks}</p>
             ) : (
               <div className="space-y-3">
                 {tasks.map((task) => {
@@ -296,12 +327,12 @@ export function DailyLogPage() {
 
           <section className="tm-panel tm-reveal tm-reveal-delay-2 p-4 space-y-3">
             <div className="tm-history-header">
-              <h2 className="text-lg font-semibold tm-title">История</h2>
+              <h2 className="text-lg font-semibold tm-title">{copy.history}</h2>
             </div>
             {loading ? (
-              <p className="text-amber-200/80">Загрузка...</p>
+              <p className="text-amber-200/80">{copy.loading}</p>
             ) : history.length === 0 ? (
-              <p className="text-amber-200/80">Записей пока нет.</p>
+              <p className="text-amber-200/80">{copy.noEntries}</p>
             ) : (
               <div className="space-y-3">
                 {history.map((day) => (

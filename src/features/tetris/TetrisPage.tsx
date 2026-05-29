@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { showAppAlert, showAppConfirm } from '../../components/AppDialog';
+import { useLocale, type AppLocale } from '../../i18n/appLocale';
 import { emitPetEvent } from '../pet/petEvents';
 import './tetris.css';
 import {
@@ -55,15 +56,125 @@ const TILE_SKINS: Record<
 
 const CONTROL_BUTTONS: Array<{
   action: TetrisAction;
-  title: string;
   text: string;
 }> = [
-  { action: 'move-left', title: 'Влево', text: '←' },
-  { action: 'rotate-cw', title: 'Повернуть', text: '⟳' },
-  { action: 'move-right', title: 'Вправо', text: '→' },
-  { action: 'soft-drop', title: 'Вниз', text: '↓' },
-  { action: 'hard-drop', title: 'Бросок', text: '⤓' }
+  { action: 'move-left', text: '←' },
+  { action: 'rotate-cw', text: '⟳' },
+  { action: 'move-right', text: '→' },
+  { action: 'soft-drop', text: '↓' },
+  { action: 'hard-drop', text: '⤓' }
 ];
+
+const TETRIS_COPY = {
+  ru: {
+    back: '← Настройки',
+    moduleChip: 'Отдельный модуль',
+    description:
+      'Фигуры можно переключать между котятами, сердечками, лапками и звёздами. Управление работает стрелками на клавиатуре и большими кнопками на смартфоне.',
+    status: 'Статус',
+    statuses: {
+      idle: 'Готова к старту',
+      paused: 'Пауза',
+      gameOver: 'Игра окончена',
+      running: 'Идёт игра'
+    },
+    start: 'Start',
+    restart: 'Start заново',
+    resume: 'Продолжить',
+    pause: 'Пауза',
+    startHint: 'Нажми Start, чтобы начать.',
+    gameOverHint: 'Можно сразу начать заново.',
+    score: 'Очки',
+    best: 'Рекорд',
+    controls: 'Управление',
+    controlsHint:
+      'Стрелки ← → двигают фигуру, ↑ поворачивает, ↓ ускоряет падение, Space делает мгновенный бросок, P ставит на паузу.',
+    skinSection: 'Оформление фигур',
+    skinHint: 'Квадратики убраны. Все фигуры используют выбранный тобой скин.',
+    nextPiece: 'Следующая фигура',
+    activeSkin: 'Активный скин',
+    statistics: 'Статистика',
+    lines: 'Линии',
+    level: 'Уровень',
+    records: 'Рекорды',
+    autosave: 'Автосохранение',
+    clear: 'Стереть',
+    clearConfirm: 'Стереть все рекорды Tetris? Это действие нельзя отменить.',
+    clearFailed: 'Не удалось стереть рекорды Tetris.',
+    emptyRecords: 'Пока нет рекордов. Первый результат сохранится автоматически после партии.',
+    recordScore: (score: number) => `${score} очков`,
+    recordMeta: (lines: number, level: number, duration: string) =>
+      `${lines} линий · уровень ${level} · ${duration}`,
+    controlsTitles: {
+      'move-left': 'Влево',
+      'rotate-cw': 'Повернуть',
+      'move-right': 'Вправо',
+      'soft-drop': 'Вниз',
+      'hard-drop': 'Бросок'
+    },
+    skins: {
+      cat: 'Котята',
+      heart: 'Сердечки',
+      paw: 'Лапки',
+      star: 'Звёзды'
+    },
+    dateLocale: 'ru-RU'
+  },
+  en: {
+    back: '← Settings',
+    moduleChip: 'Standalone module',
+    description:
+      'Pieces can switch between cats, hearts, paws, and stars. Controls work with keyboard arrows and large mobile buttons.',
+    status: 'Status',
+    statuses: {
+      idle: 'Ready to start',
+      paused: 'Paused',
+      gameOver: 'Game over',
+      running: 'Running'
+    },
+    start: 'Start',
+    restart: 'Restart',
+    resume: 'Resume',
+    pause: 'Pause',
+    startHint: 'Press Start to begin.',
+    gameOverHint: 'You can restart right away.',
+    score: 'Score',
+    best: 'Best',
+    controls: 'Controls',
+    controlsHint:
+      '← → move the piece, ↑ rotates, ↓ speeds up the fall, Space hard-drops, and P pauses.',
+    skinSection: 'Piece Style',
+    skinHint: 'Squares are removed. All pieces use the selected skin.',
+    nextPiece: 'Next Piece',
+    activeSkin: 'Active skin',
+    statistics: 'Statistics',
+    lines: 'Lines',
+    level: 'Level',
+    records: 'Records',
+    autosave: 'Autosave',
+    clear: 'Clear',
+    clearConfirm: 'Clear all Tetris records? This cannot be undone.',
+    clearFailed: 'Could not clear Tetris records.',
+    emptyRecords: 'No records yet. The first result will be saved automatically after a game.',
+    recordScore: (score: number) => `${score} points`,
+    recordMeta: (lines: number, level: number, duration: string) =>
+      `${lines} line${lines === 1 ? '' : 's'} · level ${level} · ${duration}`,
+    controlsTitles: {
+      'move-left': 'Left',
+      'rotate-cw': 'Rotate',
+      'move-right': 'Right',
+      'soft-drop': 'Down',
+      'hard-drop': 'Drop'
+    },
+    skins: {
+      cat: 'Cats',
+      heart: 'Hearts',
+      paw: 'Paws',
+      star: 'Stars'
+    },
+    dateLocale: 'en-US'
+  }
+} satisfies Record<AppLocale, unknown>;
 
 function formatDuration(durationMs: number) {
   const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
@@ -72,9 +183,9 @@ function formatDuration(durationMs: number) {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-function formatRecordDate(value: string) {
+function formatRecordDate(value: string, locale: string) {
   try {
-    return new Date(value).toLocaleString('ru-RU', {
+    return new Date(value).toLocaleString(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -126,7 +237,12 @@ function createPreviewBoard(type: TetrominoType | null) {
   return grid;
 }
 
-function renderBoardCell(cell: TetrominoType | null, key: string, selectedSkin: TetrisSkinId) {
+function renderBoardCell(
+  cell: TetrominoType | null,
+  key: string,
+  selectedSkin: TetrisSkinId,
+  skinLabels: Record<TetrisSkinId, string>
+) {
   if (!cell) {
     return <div key={key} className="tm-tetris-cell tm-tetris-cell-empty" aria-hidden="true" />;
   }
@@ -137,7 +253,7 @@ function renderBoardCell(cell: TetrominoType | null, key: string, selectedSkin: 
     <div
       key={key}
       className={`tm-tetris-cell tm-tetris-cell-filled ${skin.className}`}
-      title={skin.label}
+      title={skinLabels[selectedSkin]}
       aria-hidden="true"
     >
       <span>{skin.symbol}</span>
@@ -148,16 +264,19 @@ function renderBoardCell(cell: TetrominoType | null, key: string, selectedSkin: 
 function renderGrid(
   grid: BoardMatrix | Array<Array<TetrominoType | null>>,
   prefix: string,
-  selectedSkin: TetrisSkinId
+  selectedSkin: TetrisSkinId,
+  skinLabels: Record<TetrisSkinId, string>
 ) {
   return grid.flatMap((row, rowIndex) =>
     row.map((cell, columnIndex) =>
-      renderBoardCell(cell, `${prefix}-${rowIndex}-${columnIndex}`, selectedSkin)
+      renderBoardCell(cell, `${prefix}-${rowIndex}-${columnIndex}`, selectedSkin, skinLabels)
     )
   );
 }
 
 export function TetrisPage({ onBack }: { onBack: () => void }) {
+  const { locale } = useLocale();
+  const copy = TETRIS_COPY[locale];
   const [game, setGame] = useState<TetrisGameState | null>(null);
   const [phase, setPhase] = useState<'idle' | 'running' | 'paused' | 'game-over'>('idle');
   const [records, setRecords] = useState<TetrisRecord[]>([]);
@@ -311,8 +430,8 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
   const handleClearRecords = async () => {
     if (records.length === 0) return;
     const confirmed = await showAppConfirm({
-      message: 'Стереть все рекорды Tetris? Это действие нельзя отменить.',
-      confirmLabel: 'Стереть',
+      message: copy.clearConfirm,
+      confirmLabel: copy.clear,
       tone: 'danger'
     });
     if (!confirmed) return;
@@ -321,7 +440,7 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
       const nextRecords = await clearTetrisRecords();
       setRecords(nextRecords);
     } catch (error) {
-      await showAppAlert('Не удалось стереть рекорды Tetris.');
+      await showAppAlert(copy.clearFailed);
     }
   };
 
@@ -334,12 +453,12 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
   const bestScore = Math.max(score, records[0]?.score ?? 0);
   const statusLabel =
     phase === 'idle'
-      ? 'Готова к старту'
+      ? copy.statuses.idle
       : phase === 'paused'
-      ? 'Пауза'
+      ? copy.statuses.paused
       : phase === 'game-over'
-      ? 'Игра окончена'
-      : 'Идёт игра';
+      ? copy.statuses.gameOver
+      : copy.statuses.running;
 
   return (
     <div className="min-h-screen">
@@ -349,18 +468,17 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <button onClick={onBack} className="tm-button tm-button-ghost">
-                  ← Settings
+                  {copy.back}
                 </button>
-                <span className="tm-tetris-chip">Отдельный модуль</span>
+                <span className="tm-tetris-chip">{copy.moduleChip}</span>
               </div>
               <h1 className="text-3xl font-semibold tm-title">Tetris</h1>
               <p className="text-sm text-amber-200/75 max-w-2xl">
-                Фигуры можно переключать между котятами, сердечками, лапками и звёздами.
-                Управление работает стрелками на клавиатуре и большими кнопками на смартфоне.
+                {copy.description}
               </p>
             </div>
             <div className="tm-panel-soft p-3 tm-tetris-status-card">
-              <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em]">Статус</p>
+              <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em]">{copy.status}</p>
               <p className="text-lg font-semibold tm-title">{statusLabel}</p>
             </div>
           </div>
@@ -369,14 +487,14 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
             <section className="tm-panel p-3 sm:p-4 space-y-4">
               <div className="flex flex-wrap gap-2">
                 <button onClick={beginGame} className="tm-button tm-button-gold">
-                  {phase === 'idle' ? 'Start' : 'Start заново'}
+                  {phase === 'idle' ? copy.start : copy.restart}
                 </button>
                 <button
                   onClick={handlePause}
                   className="tm-button tm-button-steel"
                   disabled={phase === 'idle' || phase === 'game-over'}
                 >
-                  {phase === 'paused' ? 'Продолжить' : 'Пауза'}
+                  {phase === 'paused' ? copy.resume : copy.pause}
                 </button>
               </div>
 
@@ -390,60 +508,63 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
                     } as CSSProperties
                   }
                 >
-                  {renderGrid(visibleBoard, 'board', selectedSkin)}
+                  {renderGrid(visibleBoard, 'board', selectedSkin, copy.skins)}
                 </div>
                 {phase === 'idle' ? (
                   <div className="tm-tetris-overlay">
                     <div className="tm-tetris-overlay-card">
-                      Нажми <strong>Start</strong>, чтобы начать.
+                      {copy.startHint}
                     </div>
                   </div>
                 ) : null}
                 {phase === 'paused' ? (
                   <div className="tm-tetris-overlay">
-                    <div className="tm-tetris-overlay-card">Пауза</div>
+                    <div className="tm-tetris-overlay-card">{copy.statuses.paused}</div>
                   </div>
                 ) : null}
                 {phase === 'game-over' ? (
                   <div className="tm-tetris-overlay">
                     <div className="tm-tetris-overlay-card tm-tetris-game-over-card">
-                      <p className="m-0">Игра окончена</p>
+                      <p className="m-0">{copy.statuses.gameOver}</p>
                       <div className="tm-tetris-game-over-stats">
                         <div>
-                          <span>Очки</span>
+                          <span>{copy.score}</span>
                           <strong>{score}</strong>
                         </div>
                         <div>
-                          <span>Рекорд</span>
+                          <span>{copy.best}</span>
                           <strong>{bestScore}</strong>
                         </div>
                       </div>
-                      <p className="m-0 text-sm text-amber-200/75">Можно сразу начать заново.</p>
+                      <p className="m-0 text-sm text-amber-200/75">{copy.gameOverHint}</p>
                     </div>
                   </div>
                 ) : null}
               </div>
 
               <div className="tm-tetris-controls">
-                {CONTROL_BUTTONS.map((button) => (
-                  <button
-                    key={button.action}
-                    onClick={() => handleGameAction(button.action)}
-                    className="tm-button tm-button-primary tm-tetris-control"
-                    disabled={phase !== 'running'}
-                    aria-label={button.title}
-                    title={button.title}
-                  >
-                    {button.text}
-                  </button>
-                ))}
+                {CONTROL_BUTTONS.map((button) => {
+                  const title =
+                    copy.controlsTitles[button.action as keyof typeof copy.controlsTitles];
+                  return (
+                    <button
+                      key={button.action}
+                      onClick={() => handleGameAction(button.action)}
+                      className="tm-button tm-button-primary tm-tetris-control"
+                      disabled={phase !== 'running'}
+                      aria-label={title}
+                      title={title}
+                    >
+                      {button.text}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="tm-panel-soft p-3 space-y-2">
-                <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em]">Управление</p>
+                <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em]">{copy.controls}</p>
                 <p className="text-sm text-amber-100">
-                  Стрелки ← → двигают фигуру, ↑ поворачивает, ↓ ускоряет падение, Space делает
-                  мгновенный бросок, P ставит на паузу.
+                  {copy.controlsHint}
                 </p>
               </div>
             </section>
@@ -451,7 +572,7 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
             <aside className="space-y-4">
               <section className="tm-panel p-3 sm:p-4 space-y-3">
                 <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em]">
-                  Оформление фигур
+                  {copy.skinSection}
                 </p>
                 <div className="tm-tetris-skin-picker">
                   {Object.entries(TILE_SKINS).map(([skinId, skin]) => (
@@ -461,48 +582,50 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
                       className={`tm-button ${
                         selectedSkin === skinId ? 'tm-button-gold' : 'tm-button-ghost'
                       } tm-tetris-skin-button`}
-                      title={skin.label}
+                      title={copy.skins[skinId as TetrisSkinId]}
                     >
                       <span className={`tm-tetris-skin-swatch ${skin.className}`}>{skin.symbol}</span>
-                      <span>{skin.label}</span>
+                      <span>{copy.skins[skinId as TetrisSkinId]}</span>
                     </button>
                   ))}
                 </div>
                 <p className="text-xs text-amber-200/65">
-                  Квадратики убраны. Все фигуры используют выбранный тобой скин.
+                  {copy.skinHint}
                 </p>
               </section>
 
               <section className="tm-panel p-3 sm:p-4 space-y-3">
                 <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em]">
-                  Следующая фигура
+                  {copy.nextPiece}
                 </p>
-                <div className="tm-tetris-preview">{renderGrid(previewBoard, 'preview', selectedSkin)}</div>
+                <div className="tm-tetris-preview">
+                  {renderGrid(previewBoard, 'preview', selectedSkin, copy.skins)}
+                </div>
                 <div className="tm-tetris-skin-legend">
                   <div className="tm-tetris-legend-item">
                     <span className={`tm-tetris-legend-chip ${TILE_SKINS[selectedSkin].className}`}>
                       {TILE_SKINS[selectedSkin].symbol}
                     </span>
                     <span className="text-sm text-amber-100">
-                      Активный скин: {TILE_SKINS[selectedSkin].label}
+                      {copy.activeSkin}: {copy.skins[selectedSkin]}
                     </span>
                   </div>
                 </div>
               </section>
 
               <section className="tm-panel p-3 sm:p-4 space-y-3">
-                <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em]">Статистика</p>
+                <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em]">{copy.statistics}</p>
                 <div className="tm-tetris-metrics">
                   <div className="tm-tetris-metric">
-                    <span className="tm-tetris-metric-label">Score</span>
+                    <span className="tm-tetris-metric-label">{copy.score}</span>
                     <strong>{score}</strong>
                   </div>
                   <div className="tm-tetris-metric">
-                    <span className="tm-tetris-metric-label">Lines</span>
+                    <span className="tm-tetris-metric-label">{copy.lines}</span>
                     <strong>{lines}</strong>
                   </div>
                   <div className="tm-tetris-metric">
-                    <span className="tm-tetris-metric-label">Level</span>
+                    <span className="tm-tetris-metric-label">{copy.level}</span>
                     <strong>{level}</strong>
                   </div>
                 </div>
@@ -512,9 +635,9 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-xs text-amber-200/65 uppercase tracking-[0.2em] m-0">
-                      Рекорды
+                      {copy.records}
                     </p>
-                    <span className="text-xs text-amber-200/65">Автосохранение</span>
+                    <span className="text-xs text-amber-200/65">{copy.autosave}</span>
                   </div>
                   <button
                     type="button"
@@ -524,7 +647,7 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
                     className="tm-button tm-button-danger tm-button-sm"
                     disabled={records.length === 0}
                   >
-                    Стереть
+                    {copy.clear}
                   </button>
                 </div>
                 {records.length > 0 ? (
@@ -534,15 +657,18 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="m-0 text-sm font-semibold tm-title">
-                              #{index + 1} · {record.score} очков
+                              #{index + 1} · {copy.recordScore(record.score)}
                             </p>
                             <p className="m-0 text-xs text-amber-200/70">
-                              {record.lines} линий · уровень {record.level} ·{' '}
-                              {formatDuration(record.durationMs)}
+                              {copy.recordMeta(
+                                record.lines,
+                                record.level,
+                                formatDuration(record.durationMs)
+                              )}
                             </p>
                           </div>
                           <span className="text-[11px] text-amber-200/55">
-                            {formatRecordDate(record.achievedAt)}
+                            {formatRecordDate(record.achievedAt, copy.dateLocale)}
                           </span>
                         </div>
                       </div>
@@ -550,7 +676,7 @@ export function TetrisPage({ onBack }: { onBack: () => void }) {
                   </div>
                 ) : (
                   <div className="tm-screen p-3 text-sm text-amber-200/70">
-                    Пока нет рекордов. Первый результат сохранится автоматически после партии.
+                    {copy.emptyRecords}
                   </div>
                 )}
               </section>

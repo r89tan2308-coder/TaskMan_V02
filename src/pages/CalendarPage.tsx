@@ -1,13 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Task, Periodicity, Rarity } from '../entities/task/types';
 import { LedgerEvent } from '../entities/ledger/types';
-import {
-  formatAllowedWeekdaysLabel,
-  isTaskAllowedOnDate,
-  normalizeAllowedWeekdays
-} from '../entities/task/weekdays';
+import { isTaskAllowedOnDate, normalizeAllowedWeekdays } from '../entities/task/weekdays';
 import { listTasks } from '../services/tasksService';
 import { listEvents } from '../db/repositories/ledgerRepo';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
 type CalendarView = 'day' | 'week' | 'month';
 
@@ -18,19 +15,102 @@ const RARITY_STYLES: Record<Rarity, { border: string; text: string; accent: stri
   legendary: { border: 'border-l-amber-500', text: 'tm-rarity-text', accent: 'tm-rarity-legendary' }
 };
 
-const PERIODICITY_LABELS: Record<Periodicity, string> = {
-  daily: 'Ежедневно',
-  weekly: 'Раз в неделю',
-  'one-time': 'Разово',
-  monthly: 'Раз в месяц',
-  yearly: 'Раз в год'
-};
-
-const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const QUOTA_PERIOD_LABELS = {
-  week: 'нед.',
-  month: 'мес.'
-} as const;
+const CALENDAR_COPY = {
+  ru: {
+    dateLocale: 'ru-RU',
+    periodicityLabels: {
+      daily: 'Ежедневно',
+      weekly: 'Раз в неделю',
+      'one-time': 'Разово',
+      monthly: 'Раз в месяц',
+      yearly: 'Раз в год'
+    } satisfies Record<Periodicity, string>,
+    weekdayLabels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+    allowedWeekdayLabels: {
+      1: 'Пн',
+      2: 'Вт',
+      3: 'Ср',
+      4: 'Чт',
+      5: 'Пт',
+      6: 'Сб',
+      7: 'Вс'
+    },
+    quotaPeriodLabels: {
+      week: 'нед.',
+      month: 'мес.'
+    },
+    goal: 'Цель',
+    days: 'Дни',
+    progress: 'Прогресс',
+    goalClosed: 'цель закрыта',
+    selectedDay: 'Выбранный день',
+    close: 'Закрыть',
+    openDay: 'Открыть день',
+    noTasksForDay: 'На этот день задач нет.',
+    dayTasks: 'Задачи дня',
+    noDirectEvents: 'На этот день прямых событий нет.',
+    periodGoals: 'Цели периода',
+    noPeriodGoals: 'На этот день доступных целей периода нет.',
+    today: 'Сегодня',
+    previous: 'Назад',
+    next: 'Вперёд',
+    viewLabels: {
+      day: 'День',
+      week: 'Неделя',
+      month: 'Месяц'
+    } satisfies Record<CalendarView, string>,
+    loading: 'Загрузка...',
+    noTasks: 'Нет задач',
+    more: (count: number) => `+${count} ещё`
+  },
+  en: {
+    dateLocale: 'en-US',
+    periodicityLabels: {
+      daily: 'Daily',
+      weekly: 'Weekly',
+      'one-time': 'One-time',
+      monthly: 'Monthly',
+      yearly: 'Yearly'
+    } satisfies Record<Periodicity, string>,
+    weekdayLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    allowedWeekdayLabels: {
+      1: 'Mon',
+      2: 'Tue',
+      3: 'Wed',
+      4: 'Thu',
+      5: 'Fri',
+      6: 'Sat',
+      7: 'Sun'
+    },
+    quotaPeriodLabels: {
+      week: 'wk',
+      month: 'mo'
+    },
+    goal: 'Goal',
+    days: 'Days',
+    progress: 'Progress',
+    goalClosed: 'goal reached',
+    selectedDay: 'Selected Day',
+    close: 'Close',
+    openDay: 'Open Day',
+    noTasksForDay: 'There are no tasks for this day.',
+    dayTasks: 'Day Tasks',
+    noDirectEvents: 'There are no direct events for this day.',
+    periodGoals: 'Period Goals',
+    noPeriodGoals: 'There are no available period goals for this day.',
+    today: 'Today',
+    previous: 'Previous',
+    next: 'Next',
+    viewLabels: {
+      day: 'Day',
+      week: 'Week',
+      month: 'Month'
+    } satisfies Record<CalendarView, string>,
+    loading: 'Loading...',
+    noTasks: 'No tasks',
+    more: (count: number) => `+${count} more`
+  }
+} satisfies Record<AppLocale, unknown>;
 
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
@@ -59,16 +139,18 @@ const isSameLocalDate = (left: Date, right: Date) =>
   left.getMonth() === right.getMonth() &&
   left.getDate() === right.getDate();
 
-const toDateLabel = (date: Date, options?: Intl.DateTimeFormatOptions) =>
-  date.toLocaleDateString('ru-RU', {
+const getDateLocale = (locale: AppLocale) => CALENDAR_COPY[locale].dateLocale;
+
+const toDateLabel = (date: Date, locale: AppLocale, options?: Intl.DateTimeFormatOptions) =>
+  date.toLocaleDateString(getDateLocale(locale), {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
     ...options
   });
 
-const toShortDate = (date: Date) =>
-  date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+const toShortDate = (date: Date, locale: AppLocale) =>
+  date.toLocaleDateString(getDateLocale(locale), { day: '2-digit', month: '2-digit' });
 
 const parseDate = (value?: string) => {
   if (!value) return null;
@@ -162,6 +244,8 @@ function CalendarTaskSection({
   mode: 'task' | 'goal';
   quotaProgressByTaskId?: Map<string, { done: number; count: number; percent: number; reached: boolean }>;
 }) {
+  const { locale } = useLocale();
+  const copy = CALENDAR_COPY[locale];
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -180,8 +264,9 @@ function CalendarTaskSection({
             const commentPreview = task.comment?.trim()
               ? task.comment.trim().slice(0, 160)
               : null;
-            const weekdayLabel = normalizeAllowedWeekdays(task.allowedWeekdays)
-              ? formatAllowedWeekdaysLabel(task.allowedWeekdays)
+            const allowedWeekdays = normalizeAllowedWeekdays(task.allowedWeekdays);
+            const weekdayLabel = allowedWeekdays
+              ? allowedWeekdays.map((weekday) => copy.allowedWeekdayLabels[weekday]).join(', ')
               : null;
             const quotaProgress = quotaProgressByTaskId?.get(task.id);
             return (
@@ -191,19 +276,19 @@ function CalendarTaskSection({
               >
                 <p className="text-amber-50 font-semibold break-words">{task.title}</p>
                 <p className="text-xs text-amber-200/70">
-                  {PERIODICITY_LABELS[task.periodicity]}
+                  {copy.periodicityLabels[task.periodicity]}
                   {mode === 'task' && deadlineTime ? ` · ${deadlineTime}` : ''}
                   {mode === 'goal' && task.quota
-                    ? ` · Цель ${task.quota.count}/${QUOTA_PERIOD_LABELS[task.quota.per]}`
+                    ? ` · ${copy.goal} ${task.quota.count}/${copy.quotaPeriodLabels[task.quota.per]}`
                     : ''}
                 </p>
                 {weekdayLabel ? (
-                  <p className="text-xs text-amber-200/65">Дни: {weekdayLabel}</p>
+                  <p className="text-xs text-amber-200/65">{copy.days}: {weekdayLabel}</p>
                 ) : null}
                 {mode === 'goal' && quotaProgress ? (
                   <p className="text-xs text-amber-200/75">
-                    Прогресс: {quotaProgress.done} / {quotaProgress.count}
-                    {quotaProgress.reached ? ' · цель закрыта' : ''}
+                    {copy.progress}: {quotaProgress.done} / {quotaProgress.count}
+                    {quotaProgress.reached ? ` · ${copy.goalClosed}` : ''}
                   </p>
                 ) : null}
                 {commentPreview ? (
@@ -235,6 +320,21 @@ function CalendarDayModal({
   onClose: () => void;
   onOpenDayView: () => void;
 }) {
+  const { locale } = useLocale();
+  const copy = CALENDAR_COPY[locale];
+  const titleId = useId();
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+    };
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/65 flex items-start sm:items-center justify-center px-4 py-6"
@@ -243,41 +343,44 @@ function CalendarDayModal({
       <div
         className="w-full max-w-lg tm-panel p-4 sm:p-5 max-h-[85vh] overflow-y-auto space-y-4"
         onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs tm-label">Выбранный день</p>
-            <h2 className="text-xl font-semibold tm-title break-words">
-              {toDateLabel(date, { weekday: 'long', day: '2-digit', month: 'long' })}
+            <p className="text-xs tm-label">{copy.selectedDay}</p>
+            <h2 id={titleId} className="text-xl font-semibold tm-title break-words">
+              {toDateLabel(date, locale, { weekday: 'long', day: '2-digit', month: 'long' })}
             </h2>
           </div>
           <button type="button" onClick={onClose} className="tm-button tm-button-ghost tm-button-sm">
-            Закрыть
+            {copy.close}
           </button>
         </div>
 
         <div className="flex justify-end">
           <button type="button" onClick={onOpenDayView} className="tm-button tm-button-ghost tm-button-sm">
-            Открыть день
+            {copy.openDay}
           </button>
         </div>
 
         {dayTasks.length === 0 && periodGoals.length === 0 ? (
           <div className="tm-panel-soft p-4">
-            <p className="text-sm text-amber-200/80">На этот день задач нет.</p>
+            <p className="text-sm text-amber-200/80">{copy.noTasksForDay}</p>
           </div>
         ) : (
           <div className="space-y-3">
             <CalendarTaskSection
-              title="Задачи дня"
+              title={copy.dayTasks}
               tasks={dayTasks}
-              emptyText="На этот день прямых событий нет."
+              emptyText={copy.noDirectEvents}
               mode="task"
             />
             <CalendarTaskSection
-              title="Цели периода"
+              title={copy.periodGoals}
               tasks={periodGoals}
-              emptyText="На этот день доступных целей периода нет."
+              emptyText={copy.noPeriodGoals}
               mode="goal"
               quotaProgressByTaskId={quotaProgressByTaskId}
             />
@@ -289,6 +392,8 @@ function CalendarDayModal({
 }
 
 export function CalendarPage() {
+  const { locale } = useLocale();
+  const copy = CALENDAR_COPY[locale];
   const [tasks, setTasks] = useState<Task[]>([]);
   const [ledgerEvents, setLedgerEvents] = useState<LedgerEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -405,14 +510,14 @@ export function CalendarPage() {
   const setToday = () => setSelectedDate(startOfDay(new Date()));
 
   const headerLabel = useMemo(() => {
-    if (view === 'day') return toDateLabel(selectedDate);
+    if (view === 'day') return toDateLabel(selectedDate, locale);
     if (view === 'week') {
       const start = range.start;
       const end = range.end;
-      return `${toShortDate(start)} — ${toShortDate(end)}`;
+      return `${toShortDate(start, locale)} — ${toShortDate(end, locale)}`;
     }
-    return selectedDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
-  }, [range, selectedDate, view]);
+    return selectedDate.toLocaleDateString(getDateLocale(locale), { month: 'long', year: 'numeric' });
+  }, [locale, range, selectedDate, view]);
 
   const inspectedDateTasks = useMemo(
     () => (inspectedDate ? sortTasksForCalendarDate(tasksForDate(inspectedDate)) : []),
@@ -439,19 +544,19 @@ export function CalendarPage() {
             <h1 className="sr-only">Calendar</h1>
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={setToday} className="tm-button tm-button-ghost tm-button-sm">
-                Сегодня
+                {copy.today}
               </button>
               <button
                 onClick={() => shiftDate('prev')}
                 className="tm-button tm-button-ghost tm-button-sm"
               >
-                Назад
+                {copy.previous}
               </button>
               <button
                 onClick={() => shiftDate('next')}
                 className="tm-button tm-button-ghost tm-button-sm"
               >
-                Вперёд
+                {copy.next}
               </button>
               <div className="flex items-center gap-1">
                 {(['day', 'week', 'month'] as CalendarView[]).map((mode) => (
@@ -462,7 +567,7 @@ export function CalendarPage() {
                       view === mode ? 'tm-button-primary' : 'tm-button-ghost'
                     }`}
                   >
-                    {mode === 'day' ? 'День' : mode === 'week' ? 'Неделя' : 'Месяц'}
+                    {copy.viewLabels[mode]}
                   </button>
                 ))}
               </div>
@@ -474,19 +579,19 @@ export function CalendarPage() {
           </div>
 
           {loading ? (
-            <p className="text-amber-200/80">Загрузка...</p>
+            <p className="text-amber-200/80">{copy.loading}</p>
           ) : view === 'day' ? (
             <div className="space-y-3">
               <CalendarTaskSection
-                title="Задачи дня"
+                title={copy.dayTasks}
                 tasks={sortTasksForCalendarDate(tasksForDate(selectedDate))}
-                emptyText="На этот день прямых событий нет."
+                emptyText={copy.noDirectEvents}
                 mode="task"
               />
               <CalendarTaskSection
-                title="Цели периода"
+                title={copy.periodGoals}
                 tasks={sortTasksForCalendarDate(periodGoalsForDate(selectedDate))}
-                emptyText="На этот день доступных целей периода нет."
+                emptyText={copy.noPeriodGoals}
                 mode="goal"
                 quotaProgressByTaskId={selectedDateQuotaProgress}
               />
@@ -504,14 +609,14 @@ export function CalendarPage() {
                         onClick={() => openDateDetails(date)}
                         className={`text-sm text-left ${isToday ? 'tm-title' : 'tm-label'}`}
                       >
-                        {toDateLabel(date, { day: '2-digit', month: 'short' })}
+                        {toDateLabel(date, locale, { day: '2-digit', month: 'short' })}
                       </button>
                       <span className="text-xs text-amber-200/70">
-                        {WEEKDAY_LABELS[getWeekdayIndex(date)]}
+                        {copy.weekdayLabels[getWeekdayIndex(date)]}
                       </span>
                     </div>
                     {dayTasks.length === 0 ? (
-                      <p className="text-amber-200/70 text-sm">Нет задач</p>
+                      <p className="text-amber-200/70 text-sm">{copy.noTasks}</p>
                     ) : (
                       <div className="space-y-2">
                         {dayTasks.map((task) => {
@@ -523,7 +628,7 @@ export function CalendarPage() {
                             >
                               <p className="text-sm text-amber-50">{task.title}</p>
                               <p className="text-xs text-amber-200/70">
-                                {PERIODICITY_LABELS[task.periodicity]}
+                                {copy.periodicityLabels[task.periodicity]}
                               </p>
                             </div>
                           );
@@ -537,7 +642,7 @@ export function CalendarPage() {
           ) : (
             <div className="space-y-3">
               <div className="grid grid-cols-7 gap-2 text-xs text-amber-200/70">
-                {WEEKDAY_LABELS.map((label) => (
+                {copy.weekdayLabels.map((label) => (
                   <div key={label} className="text-center">
                     {label}
                   </div>
@@ -584,7 +689,7 @@ export function CalendarPage() {
                         })}
                         {dayTasks.length > 3 ? (
                           <span className="text-[10px] text-amber-200/70">
-                            +{dayTasks.length - 3} ещё
+                            {copy.more(dayTasks.length - 3)}
                           </span>
                         ) : null}
                       </div>

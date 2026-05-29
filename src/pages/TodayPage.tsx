@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -34,6 +35,7 @@ import { logTaskEvent } from '../services/taskEventService';
 import { getXpBalance } from '../services/xpService';
 import { addEvent, deleteEvent, listEvents } from '../db/repositories/ledgerRepo';
 import { getAppMetaValue } from '../db/repositories/appMetaRepo';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 import { db } from '../db';
 import { xpForTask } from '../logic/xp';
 import { computeTaskDailyStreak } from '../logic/streak';
@@ -64,14 +66,6 @@ const RARITY_SORT_ORDER: Record<Rarity, number> = {
   legendary: 3
 };
 
-const PERIODICITY_LABELS: Record<Periodicity, string> = {
-  daily: 'Ежедневно',
-  weekly: 'Раз в неделю',
-  'one-time': 'Разово',
-  monthly: 'Раз в месяц',
-  yearly: 'Раз в год'
-};
-
 const TASK_FILTERS: TaskFilter[] = ['all', 'daily', 'weekly', 'monthly', 'yearly', 'one-time'];
 const TASK_SORTS: Array<{ value: TaskSort; label: string }> = [
   { value: 'manual', label: 'Ручная' },
@@ -91,12 +85,256 @@ const QUEUE_LABELS: Record<TodayQueueTab, string> = {
   next: 'Next',
   backlog: 'Backlog'
 };
-const BUCKET_ACTION_LABELS: Record<TodayQueueTab, string> = {
-  today: 'В Today',
-  inbox: 'В Inbox',
-  next: 'В Next',
-  backlog: 'В Backlog'
-};
+const TODAY_COPY = {
+  ru: {
+    queueAria: 'Очереди задач',
+    queueLabels: {
+      today: 'Сегодня',
+      inbox: 'Входящие',
+      next: 'Далее',
+      backlog: 'Запас'
+    },
+    queueSystemLabels: {
+      inbox: 'Входящие',
+      next: 'Далее',
+      backlog: 'Запас'
+    },
+    sortLabels: {
+      manual: 'Ручная',
+      rarity: 'По редкости',
+      createdAt: 'По времени создания'
+    },
+    periodicityLabels: {
+      daily: 'Ежедневно',
+      weekly: 'Раз в неделю',
+      'one-time': 'Разово',
+      monthly: 'Раз в месяц',
+      yearly: 'Раз в год'
+    },
+    rarityLabels: {
+      common: 'обычная',
+      rare: 'редкая',
+      epic: 'эпическая',
+      legendary: 'легендарная'
+    },
+    valueLabel: 'Ценность',
+    commentBadge: 'комм.',
+    overdueBadge: 'просрочена',
+    month: 'месяц',
+    week: 'неделя',
+    hideDetails: 'Скрыть детали',
+    showDetails: 'Показать детали',
+    hideMove: 'Скрыть перенос',
+    move: 'Перенести',
+    dragDetailsHint: 'Перетащить для ручной сортировки или нажать для деталей',
+    planningBadge: 'Планирование',
+    remindPrefix: 'Напомнить',
+    quota: 'Квота',
+    complete: 'Сделать',
+    more: 'Ещё',
+    actionsFor: (title: string) => `Действия для ${title}`,
+    completeAria: (title: string) => `Сделать: ${title}`,
+    moreAria: (title: string) => `Ещё действия: ${title}`,
+    logAtDate: 'Записать на дату',
+    dateTime: 'Дата и время',
+    cancel: 'Отмена',
+    logSaving: 'Запись...',
+    logAction: 'Записать',
+    calendarAction: 'Календарь',
+    edit: 'Изменить',
+    skip: 'Пропустить',
+    delete: 'Удалить',
+    deleting: 'Удаление...',
+    queue: 'Очередь',
+    bucketActionLabels: {
+      today: 'В Сегодня',
+      inbox: 'Во Входящие',
+      next: 'В Далее',
+      backlog: 'В Запас'
+    },
+    comment: 'Комментарий',
+    rewardNotSelected: 'Награда не выбрана',
+    rewardRemaining: (xp: number) => `Осталось ${xp} XP`,
+    rewardUnlocked: 'Награда уже открыта',
+    rewardEmptyHint: 'Добавь награду, и здесь сразу появится ближайшая цель с прогрессом.',
+    currentXp: (xp: number) => `Сейчас у тебя ${xp} XP`,
+    allFilter: 'Все',
+    dayTitle: 'Как идёт день',
+    done: 'Сделано',
+    remaining: 'Осталось',
+    overdue: 'Просрочено',
+    dueSoon: 'Скоро',
+    total: 'Всего',
+    dayProgress: {
+      start: 'Старт',
+      aria: 'Прогресс дня',
+      emptyPlan: 'План на день появится после добавления задач',
+      progressLabel: (completed: number, total: number) => `${completed} из ${total}`,
+      remaining: (remaining: number, overdue: number) =>
+        `Осталось ${Math.max(remaining, 0)}${overdue > 0 ? ` · просрочено ${overdue}` : ''}`
+    },
+    filters: 'Фильтры',
+    search: 'Поиск',
+    searchPlaceholder: 'Найти задачу',
+    sort: 'Сортировка',
+    periodicity: 'Периодичность',
+    addTask: '+ Задача',
+    searchPill: (query: string) => `Поиск: ${query}`,
+    filterPill: (label: string) => `Фильтр: ${label}`,
+    reset: 'Сбросить',
+    loading: 'Загрузка...',
+    noCompletedByFilter: 'По текущему поиску или фильтрам в сделанных сегодня ничего не найдено.',
+    noCompletedToday: 'Сегодня ещё нет закрытых задач.',
+    noResultsTitle: 'Ничего не найдено',
+    noResultsText: 'Попробуй изменить поиск или фильтры.',
+    activeEmptyTitle: 'Активных задач на сегодня нет',
+    activeEmptyText: 'Добавь новую задачу или возьми что-то из следующего слоя.',
+    dueSoonTitle: 'Скоро дедлайн',
+    todayTitle: 'Сегодня',
+    todayDoneTitle: 'На сегодня всё',
+    todayDoneText: 'Основной слой дня пуст. Возьми что-то из следующего слоя.',
+    nextPreviewTitle: 'Далее',
+    nextPreviewSubtitle: 'Ближайший резерв после очереди Далее',
+    nextEmptyTitle: 'Следующий слой пуст',
+    nextEmptyText: 'Задачи из очереди Далее появятся здесь.',
+    openNext: 'Открыть Далее',
+    queueDescriptions: {
+      today: 'Главный слой дня.',
+      inbox: 'Новые задачи и быстрый захват.',
+      next: 'Ближайший слой после Сегодня.',
+      backlog: 'Отложенные задачи вне главного потока.'
+    },
+    inboxEmptyTitle: 'Входящие пусты',
+    inboxEmptyText: 'Новые задачи появятся здесь, пока ты их не разберёшь.',
+    backlogEmptyTitle: 'Запас пуст',
+    backlogEmptyText: 'Отложенных задач пока нет.',
+    nextQueueEmptyText: 'Когда появятся задачи на потом, они окажутся здесь.'
+  },
+  en: {
+    queueAria: 'Task queues',
+    queueLabels: {
+      today: 'Today',
+      inbox: 'Inbox',
+      next: 'Next',
+      backlog: 'Backlog'
+    },
+    queueSystemLabels: {
+      inbox: 'Inbox',
+      next: 'Next',
+      backlog: 'Backlog'
+    },
+    sortLabels: {
+      manual: 'Manual',
+      rarity: 'By rarity',
+      createdAt: 'By creation time'
+    },
+    periodicityLabels: {
+      daily: 'Daily',
+      weekly: 'Weekly',
+      'one-time': 'One-time',
+      monthly: 'Monthly',
+      yearly: 'Yearly'
+    },
+    rarityLabels: {
+      common: 'common',
+      rare: 'rare',
+      epic: 'epic',
+      legendary: 'legendary'
+    },
+    valueLabel: 'Value',
+    commentBadge: 'note',
+    overdueBadge: 'overdue',
+    month: 'month',
+    week: 'week',
+    hideDetails: 'Hide details',
+    showDetails: 'Show details',
+    hideMove: 'Hide move',
+    move: 'Move',
+    dragDetailsHint: 'Drag to reorder or click for details',
+    planningBadge: 'Planning',
+    remindPrefix: 'Remind',
+    quota: 'Quota',
+    complete: 'Done',
+    more: 'More',
+    actionsFor: (title: string) => `Actions for ${title}`,
+    completeAria: (title: string) => `Done: ${title}`,
+    moreAria: (title: string) => `More actions: ${title}`,
+    logAtDate: 'Log at date',
+    dateTime: 'Date and time',
+    cancel: 'Cancel',
+    logSaving: 'Logging...',
+    logAction: 'Log',
+    calendarAction: 'Calendar',
+    edit: 'Edit',
+    skip: 'Skip',
+    delete: 'Delete',
+    deleting: 'Deleting...',
+    queue: 'Queue',
+    bucketActionLabels: {
+      today: 'To Today',
+      inbox: 'To Inbox',
+      next: 'To Next',
+      backlog: 'To Backlog'
+    },
+    comment: 'Comment',
+    rewardNotSelected: 'No reward selected',
+    rewardRemaining: (xp: number) => `${xp} XP left`,
+    rewardUnlocked: 'Reward already unlocked',
+    rewardEmptyHint: 'Add a reward and the nearest goal will appear here with progress.',
+    currentXp: (xp: number) => `You have ${xp} XP now`,
+    allFilter: 'All',
+    dayTitle: 'How the day is going',
+    done: 'Done',
+    remaining: 'Remaining',
+    overdue: 'Overdue',
+    dueSoon: 'Due soon',
+    total: 'Total',
+    dayProgress: {
+      start: 'Start',
+      aria: 'Day progress',
+      emptyPlan: 'The day plan will appear after tasks are added',
+      progressLabel: (completed: number, total: number) => `${completed} / ${total}`,
+      remaining: (remaining: number, overdue: number) =>
+        `Remaining ${Math.max(remaining, 0)}${overdue > 0 ? ` · overdue ${overdue}` : ''}`
+    },
+    filters: 'Filters',
+    search: 'Search',
+    searchPlaceholder: 'Find a task',
+    sort: 'Sort',
+    periodicity: 'Periodicity',
+    addTask: '+ Add task',
+    searchPill: (query: string) => `Search: ${query}`,
+    filterPill: (label: string) => `Filter: ${label}`,
+    reset: 'Reset',
+    loading: 'Loading...',
+    noCompletedByFilter: 'No completed tasks match the current search or filters.',
+    noCompletedToday: 'No completed tasks today yet.',
+    noResultsTitle: 'Nothing found',
+    noResultsText: 'Try changing the search or filters.',
+    activeEmptyTitle: 'No active tasks for today',
+    activeEmptyText: 'Add a new task or pull something from the next layer.',
+    dueSoonTitle: 'Due soon',
+    todayTitle: 'Today',
+    todayDoneTitle: 'All done for today',
+    todayDoneText: 'The main day layer is empty. Pull something from the next layer.',
+    nextPreviewTitle: 'Next',
+    nextPreviewSubtitle: 'Nearest reserve after Today',
+    nextEmptyTitle: 'Next layer is empty',
+    nextEmptyText: 'Tasks from the Next queue will appear here.',
+    openNext: 'Open Next',
+    queueDescriptions: {
+      today: 'The main day layer.',
+      inbox: 'New tasks and quick capture.',
+      next: 'The nearest layer after Today.',
+      backlog: 'Deferred tasks outside the main flow.'
+    },
+    inboxEmptyTitle: 'Inbox is empty',
+    inboxEmptyText: 'New tasks stay here until you sort them.',
+    backlogEmptyTitle: 'Backlog is empty',
+    backlogEmptyText: 'No deferred tasks yet.',
+    nextQueueEmptyText: 'Tasks for later will appear here.'
+  }
+} satisfies Record<AppLocale, unknown>;
 const weekdaySelectionsEqual = (
   left: readonly AllowedWeekday[] | undefined,
   right: readonly AllowedWeekday[]
@@ -544,19 +782,21 @@ function TodayDayProgressBar({
   completed,
   total,
   remaining,
-  overdue
+  overdue,
+  labels
 }: {
   completed: number;
   total: number;
   remaining: number;
   overdue: number;
+  labels: (typeof TODAY_COPY)[AppLocale]['dayProgress'];
 }) {
   const progressPercent = total > 0 ? clampPercent((completed / total) * 100) : 0;
-  const progressLabel = total > 0 ? `${completed} из ${total}` : 'Старт';
+  const progressLabel = total > 0 ? labels.progressLabel(completed, total) : labels.start;
   const progressCaption =
     total > 0
-      ? `Осталось ${Math.max(remaining, 0)}${overdue > 0 ? ` · просрочено ${overdue}` : ''}`
-      : 'План на день появится после добавления задач';
+      ? labels.remaining(remaining, overdue)
+      : labels.emptyPlan;
 
   return (
     <div
@@ -567,7 +807,7 @@ function TodayDayProgressBar({
       <div
         className="tm-progress w-full"
         role="progressbar"
-        aria-label="Прогресс дня"
+        aria-label={labels.aria}
         aria-valuenow={Math.round(progressPercent)}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -831,12 +1071,41 @@ function CalendarModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const titleId = useId();
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onCancel, open]);
+
   if (!open || !task) return null;
 
   return (
     <div className="tm-modal-overlay fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
-      <div className="w-full max-w-md tm-panel p-6 shadow-xl max-h-[85vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold tm-title mb-2">Add to Calendar</h2>
+      <div
+        className="w-full max-w-md tm-panel p-6 shadow-xl max-h-[85vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <h2 id={titleId} className="text-xl font-semibold tm-title mb-2">Add to Calendar</h2>
         <p className="text-sm text-amber-200/80 mb-4">{task.title}</p>
         <div className="space-y-4">
           <div>
@@ -850,12 +1119,14 @@ function CalendarModal({
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button
+              type="button"
               onClick={onCancel}
               className="tm-button tm-button-ghost"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={onConfirm}
               className="tm-button tm-button-gold"
             >
@@ -885,16 +1156,47 @@ function LogDateModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
+  const titleId = useId();
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    return () => {
+      returnFocusRef.current?.focus();
+      returnFocusRef.current = null;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || busy || typeof document === 'undefined') return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [busy, onCancel, open]);
+
   if (!open || !task) return null;
 
   return (
     <div className="tm-modal-overlay fixed inset-0 bg-black/70 flex items-start sm:items-center justify-center px-4 py-6 overflow-y-auto">
-      <div className="w-full max-w-md tm-panel p-6 shadow-xl max-h-[85vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold tm-title mb-2">Записать на дату</h2>
+      <div
+        className="w-full max-w-md tm-panel p-6 shadow-xl max-h-[85vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <h2 id={titleId} className="text-xl font-semibold tm-title mb-2">{copy.logAtDate}</h2>
         <p className="text-sm text-amber-200/80 mb-4">{task.title}</p>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm tm-label mb-1">Дата и время</label>
+            <label className="block text-sm tm-label mb-1">{copy.dateTime}</label>
             <input
               type="datetime-local"
               value={value}
@@ -910,7 +1212,7 @@ function LogDateModal({
               className="tm-button tm-button-ghost"
               disabled={busy}
             >
-              Отмена
+              {copy.cancel}
             </button>
             <button
               type="button"
@@ -918,7 +1220,7 @@ function LogDateModal({
               className="tm-button tm-button-gold"
               disabled={busy}
             >
-              {busy ? 'Запись...' : 'Записать'}
+              {busy ? copy.logSaving : copy.logAction}
             </button>
           </div>
         </div>
@@ -1004,6 +1306,8 @@ function TaskCard({
   busy: boolean;
   deleting: boolean;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   const rarityStyle = RARITY_STYLES[task.rarity] ?? RARITY_STYLES.common;
   const taskValue = getTaskValue(task);
   const deadlineDate = getNextDeadlineDate(task);
@@ -1093,10 +1397,10 @@ function TaskCard({
           <>
           <p className="text-sm text-amber-200/80 flex flex-wrap items-center gap-2">
           <span>
-            {PERIODICITY_LABELS[task.periodicity]} ·{' '}
-            <span className={rarityStyle.text}>{task.rarity}</span> · Ценность {taskValue}
+            {copy.periodicityLabels[task.periodicity]} ·{' '}
+            <span className={rarityStyle.text}>{copy.rarityLabels[task.rarity]}</span> · {copy.valueLabel} {taskValue}
           </span>
-          {hasComment ? <span className="tm-badge tm-badge-note">комм.</span> : null}
+          {hasComment ? <span className="tm-badge tm-badge-note">{copy.commentBadge}</span> : null}
         </p>
         {skillTags.length ? (
           <div className="tm-task-tags">
@@ -1240,6 +1544,8 @@ function OverdueTaskCard({
   busy: boolean;
   deleting: boolean;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   const rarityStyle = RARITY_STYLES[task.rarity] ?? RARITY_STYLES.common;
   const taskValue = getTaskValue(task);
   const deadlineDate = getCurrentPeriodDeadline(task);
@@ -1313,11 +1619,11 @@ function OverdueTaskCard({
             <>
               <p className="text-sm text-amber-200/80 flex flex-wrap items-center gap-2">
                 <span>
-                  {PERIODICITY_LABELS[task.periodicity]} ·{' '}
-                  <span className={rarityStyle.text}>{task.rarity}</span> · Ценность {taskValue}
+                  {copy.periodicityLabels[task.periodicity]} ·{' '}
+                  <span className={rarityStyle.text}>{copy.rarityLabels[task.rarity]}</span> · {copy.valueLabel} {taskValue}
                 </span>
-                {hasComment ? <span className="tm-badge tm-badge-note">комм.</span> : null}
-                <span className="tm-badge tm-badge-danger">просрочена</span>
+                {hasComment ? <span className="tm-badge tm-badge-note">{copy.commentBadge}</span> : null}
+                <span className="tm-badge tm-badge-danger">{copy.overdueBadge}</span>
               </p>
               {overdueLabel ? <p className="text-xs text-rose-200">{overdueLabel}</p> : null}
               {skillTags.length ? (
@@ -1526,6 +1832,8 @@ function TodayRewardStrip({
   nextReward: Reward | null;
   highlighted?: boolean;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   const rewardProgressPercent = nextReward ? getRewardProgressPercent(xp, nextReward.cost) : 0;
   const rewardProgressValue = nextReward ? Math.min(xp, nextReward.cost) : 0;
   const remainingXp = nextReward ? Math.max(nextReward.cost - xp, 0) : 0;
@@ -1539,12 +1847,12 @@ function TodayRewardStrip({
       <div className="tm-today-summary-header">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold tm-title tm-today-reward-title">
-            {nextReward ? nextReward.name : 'Награда не выбрана'}
+            {nextReward ? nextReward.name : copy.rewardNotSelected}
           </h2>
         </div>
         {nextReward ? (
           <p className="tm-today-reward-remaining tm-today-reward-header-remaining">
-            {remainingXp > 0 ? `Осталось ${remainingXp} XP` : 'Награда уже открыта'}
+            {remainingXp > 0 ? copy.rewardRemaining(remainingXp) : copy.rewardUnlocked}
           </p>
         ) : null}
       </div>
@@ -1560,9 +1868,9 @@ function TodayRewardStrip({
       ) : (
         <div className="space-y-2">
           <p className="tm-today-reward-remaining">
-            Добавь награду, и здесь сразу появится ближайшая цель с прогрессом.
+            {copy.rewardEmptyHint}
           </p>
-          <p className="tm-today-reward-subline">Сейчас у тебя {xp} XP</p>
+          <p className="tm-today-reward-subline">{copy.currentXp(xp)}</p>
         </div>
       )}
     </section>
@@ -1893,6 +2201,8 @@ function ExecutionTaskCard({
   dragging: boolean;
   dragOver: boolean;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   const rarityStyle = RARITY_STYLES[task.rarity] ?? RARITY_STYLES.common;
   const taskValue = getTaskValue(task);
   const taskValueToneClass = getTaskValueToneClass(taskValue);
@@ -1917,11 +2227,11 @@ function ExecutionTaskCard({
   }, [task.checklist]);
   const hasChecklist = checklistItems.length > 0;
   const checklistProgress = getChecklistProgressPercent(checklistItems);
-  const queuePeriodLabel = quotaStatus?.per === 'month' ? 'месяц' : 'неделя';
+  const queuePeriodLabel = quotaStatus?.per === 'month' ? copy.month : copy.week;
   const showDetails = expanded || planning;
   const showPenaltyAction = queue === 'today';
-  const detailsLabel = showDetails ? 'Скрыть детали' : 'Показать детали';
-  const planLabel = planning ? 'Скрыть перенос' : 'Перенести';
+  const detailsLabel = showDetails ? copy.hideDetails : copy.showDetails;
+  const planLabel = planning ? copy.hideMove : copy.move;
   const detailsId = `task-details-${task.id}`;
   const actionRailClassName = 'tm-task-action-rail';
   const completeActionClassName = 'tm-button tm-button-primary tm-task-action-complete';
@@ -2043,7 +2353,7 @@ function ExecutionTaskCard({
               aria-controls={detailsId}
               title={
                 dragEnabled && !busy
-                  ? 'Перетащить для ручной сортировки или нажать для деталей'
+                  ? copy.dragDetailsHint
                   : detailsLabel
               }
             >
@@ -2063,14 +2373,14 @@ function ExecutionTaskCard({
                     {dueSoonMeta.label}
                   </span>
                 ) : null}
-                {planning ? <span className="tm-badge tm-badge-note">Планирование</span> : null}
+                {planning ? <span className="tm-badge tm-badge-note">{copy.planningBadge}</span> : null}
               </div>
             ) : null}
           </div>
           <p className="text-sm text-amber-200/80 flex flex-wrap items-center gap-2">
             <span>
-              {PERIODICITY_LABELS[task.periodicity]} · <span className={rarityStyle.text}>{task.rarity}</span> ·
-              Ценность {taskValue}
+              {copy.periodicityLabels[task.periodicity]} · <span className={rarityStyle.text}>{copy.rarityLabels[task.rarity]}</span> ·
+              {copy.valueLabel} {taskValue}
             </span>
           </p>
           {projectLabel ? (
@@ -2095,7 +2405,7 @@ function ExecutionTaskCard({
           {deadlineLabel || reminderLabel ? (
             <p className="text-sm text-amber-200/70 flex flex-wrap gap-3">
               {deadlineLabel ? <span>{deadlineLabel}</span> : null}
-              {reminderLabel ? <span>Напомнить {reminderLabel}</span> : null}
+              {reminderLabel ? <span>{copy.remindPrefix} {reminderLabel}</span> : null}
             </p>
           ) : null}
           {commentPreview && !showDetails ? (
@@ -2103,7 +2413,7 @@ function ExecutionTaskCard({
           ) : null}
           {quotaStatus ? (
             <p className="text-xs text-amber-200/70">
-              Квота: {quotaStatus.done} / {quotaStatus.count} · {queuePeriodLabel}
+              {copy.quota}: {quotaStatus.done} / {quotaStatus.count} · {queuePeriodLabel}
             </p>
           ) : null}
           {task.periodicity === 'daily' && streakLabel ? (
@@ -2125,8 +2435,8 @@ function ExecutionTaskCard({
             }}
             className={`${completeActionClassName} ${completing ? 'tm-task-action-complete-active' : ''}`}
             disabled={busy}
-            aria-label={`Сделать: ${task.title}`}
-            title="Сделать"
+            aria-label={copy.completeAria(task.title)}
+            title={copy.complete}
           >
             ✓
           </button>
@@ -2138,8 +2448,8 @@ function ExecutionTaskCard({
             disabled={busy}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            aria-label={`Ещё действия: ${task.title}`}
-            title="Ещё"
+            aria-label={copy.moreAria(task.title)}
+            title={copy.more}
           >
             ...
           </button>
@@ -2151,7 +2461,7 @@ function ExecutionTaskCard({
               ref={menuRef}
               className={`tm-task-overflow-menu ${portalThemeClassName}`}
               role="menu"
-              aria-label={`Действия для ${task.title}`}
+              aria-label={copy.actionsFor(task.title)}
               style={{
                 top: `${menuPosition.top}px`,
                 left: `${menuPosition.left}px`,
@@ -2183,7 +2493,7 @@ function ExecutionTaskCard({
                 disabled={busy}
                 role="menuitem"
               >
-                Записать на дату
+                {copy.logAtDate}
               </button>
               <button
                 type="button"
@@ -2192,7 +2502,7 @@ function ExecutionTaskCard({
                 disabled={busy}
                 role="menuitem"
               >
-                Календарь
+                {copy.calendarAction}
               </button>
               <button
                 type="button"
@@ -2201,7 +2511,7 @@ function ExecutionTaskCard({
                 disabled={busy}
                 role="menuitem"
               >
-                Изменить
+                {copy.edit}
               </button>
               {showPenaltyAction ? (
                 <button
@@ -2211,7 +2521,7 @@ function ExecutionTaskCard({
                   disabled={busy}
                   role="menuitem"
                 >
-                  Пропустить
+                  {copy.skip}
                 </button>
               ) : null}
               <button
@@ -2221,7 +2531,7 @@ function ExecutionTaskCard({
                 disabled={busy}
                 role="menuitem"
               >
-                {deleting ? 'Удаление...' : 'Удалить'}
+                {deleting ? copy.deleting : copy.delete}
               </button>
             </div>,
             document.body
@@ -2231,7 +2541,7 @@ function ExecutionTaskCard({
         <div id={detailsId} className="tm-task-details space-y-3">
           {planning ? (
             <div className="space-y-2">
-              <p className="tm-task-details-title">Очередь</p>
+              <p className="tm-task-details-title">{copy.queue}</p>
               <div className="flex flex-wrap gap-2">
                 {TODAY_QUEUE_TABS.map((bucket) => (
                   <button
@@ -2241,7 +2551,7 @@ function ExecutionTaskCard({
                     className={`tm-button tm-button-sm ${task.bucket === bucket ? 'tm-button-gold' : 'tm-button-ghost'}`}
                     disabled={busy}
                   >
-                    {BUCKET_ACTION_LABELS[bucket]}
+                    {copy.bucketActionLabels[bucket]}
                   </button>
                 ))}
               </div>
@@ -2275,7 +2585,7 @@ function ExecutionTaskCard({
           ) : null}
           {commentValue ? (
             <div className="tm-task-comment-panel">
-              <p className="tm-task-details-title">Комментарий</p>
+              <p className="tm-task-details-title">{copy.comment}</p>
               <p className="tm-task-details-text whitespace-pre-wrap">{commentValue}</p>
             </div>
           ) : null}
@@ -2286,6 +2596,8 @@ function ExecutionTaskCard({
 }
 
 export function TodayPage() {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   const [tasks, setTasks] = useState<Task[]>([]);
   const [ledgerEvents, setLedgerEvents] = useState<LedgerEvent[]>([]);
   const [filter, setFilter] = useState<TaskFilter>('all');
@@ -3429,7 +3741,7 @@ export function TodayPage() {
   };
 
   const queueTabsSection = (
-    <section className="tm-queue-tabs" aria-label="Очереди задач">
+    <section className="tm-queue-tabs" aria-label={copy.queueAria}>
       {TODAY_QUEUE_TABS.map((queue) => (
         <button
           key={queue}
@@ -3438,7 +3750,7 @@ export function TodayPage() {
           className={`tm-queue-tab ${activeQueue === queue ? 'tm-queue-tab-active' : ''}`}
           aria-pressed={activeQueue === queue}
         >
-          <span>{QUEUE_LABELS[queue]}</span>
+          <span>{copy.queueLabels[queue]}</span>
           <span className="tm-queue-tab-count">{queueCounts[queue]}</span>
         </button>
       ))}
@@ -3468,8 +3780,8 @@ export function TodayPage() {
         taskStreakById={dailyTaskStreakById}
         emptyStateText={
           hasSearchOrFilters
-            ? 'По текущему поиску или фильтрам в сделанных сегодня ничего не найдено.'
-            : 'Сегодня ещё нет закрытых задач.'
+            ? copy.noCompletedByFilter
+            : copy.noCompletedToday
         }
       />
     ) : null;
@@ -3482,7 +3794,7 @@ export function TodayPage() {
       : visibleBacklogTasks;
 
   const systemTaskTotalCount = actionableTasks.length;
-  const secondaryQueueSummary = `Скоро ${statsDueSoonCount} · Всего ${systemTaskTotalCount} · Inbox ${statsInboxCount} · Next ${nextTasks.length} · Backlog ${backlogTasks.length}`;
+  const secondaryQueueSummary = `${copy.dueSoon} ${statsDueSoonCount} · ${copy.total} ${systemTaskTotalCount} · ${copy.queueSystemLabels.inbox} ${statsInboxCount} · ${copy.queueSystemLabels.next} ${nextTasks.length} · ${copy.queueSystemLabels.backlog} ${backlogTasks.length}`;
 
   const topSummarySection = (
     <section
@@ -3492,7 +3804,7 @@ export function TodayPage() {
       <section className={`tm-panel-soft tm-summary-panel tm-today-day-card ${completionFeedback ? 'tm-summary-panel-active' : ''}`}>
         <div className="tm-today-summary-header">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold tm-title">Как идёт день</h2>
+            <h2 className="text-lg font-semibold tm-title">{copy.dayTitle}</h2>
           </div>
         </div>
         <TodayDayProgressBar
@@ -3500,18 +3812,19 @@ export function TodayPage() {
           total={todayLoopTotalCount}
           remaining={statsRemainingCount}
           overdue={statsOverdueCount}
+          labels={copy.dayProgress}
         />
         <div className="tm-today-mini-metrics">
           <div className="tm-today-mini-metric tm-today-mini-metric-done">
-            <p className="tm-today-mini-label">Сделано</p>
+            <p className="tm-today-mini-label">{copy.done}</p>
             <p className="tm-today-mini-value">{completedTodayCount}</p>
           </div>
           <div className="tm-today-mini-metric">
-            <p className="tm-today-mini-label">Осталось</p>
+            <p className="tm-today-mini-label">{copy.remaining}</p>
             <p className="tm-today-mini-value">{statsRemainingCount}</p>
           </div>
           <div className={`tm-today-mini-metric ${statsOverdueCount > 0 ? 'tm-today-mini-metric-overdue' : ''}`}>
-            <p className="tm-today-mini-label">Просрочено</p>
+            <p className="tm-today-mini-label">{copy.overdue}</p>
             <p className="tm-today-mini-value">{statsOverdueCount}</p>
           </div>
         </div>
@@ -3540,25 +3853,25 @@ export function TodayPage() {
                   aria-haspopup="true"
                   aria-expanded={sortOpen}
                 >
-                  Filters
+                  {copy.filters}
                 </button>
                 {sortOpen ? (
                   <div className="absolute left-0 top-full mt-2 tm-panel p-3 z-50 w-72 max-w-[calc(100vw-2.5rem)] space-y-3 sm:left-auto sm:right-0">
                     <div className="space-y-2">
                       <label htmlFor="task-search" className="text-xs tm-label">
-                        Поиск
+                        {copy.search}
                       </label>
                       <input
                         id="task-search"
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
                         className="tm-input text-sm"
-                        placeholder="Найти задачу"
+                        placeholder={copy.searchPlaceholder}
                       />
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="task-sort" className="text-xs tm-label">
-                        Сортировка
+                        {copy.sort}
                       </label>
                       <select
                         id="task-sort"
@@ -3568,14 +3881,14 @@ export function TodayPage() {
                       >
                         {TASK_SORTS.map((option) => (
                           <option key={option.value} value={option.value}>
-                            {option.label}
+                            {copy.sortLabels[option.value]}
                           </option>
                         ))}
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label htmlFor="task-filter" className="text-xs tm-label">
-                        Периодичность
+                        {copy.periodicity}
                       </label>
                       <select
                         id="task-filter"
@@ -3585,7 +3898,7 @@ export function TodayPage() {
                       >
                         {TASK_FILTERS.map((queueFilter) => (
                           <option key={queueFilter} value={queueFilter}>
-                            {queueFilter === 'all' ? 'Все' : PERIODICITY_LABELS[queueFilter]}
+                            {queueFilter === 'all' ? copy.allFilter : copy.periodicityLabels[queueFilter]}
                           </option>
                         ))}
                       </select>
@@ -3598,12 +3911,12 @@ export function TodayPage() {
                 onClick={() => setAdding(true)}
                 className="tm-button tm-button-primary ml-auto"
               >
-                + Add task
+                {copy.addTask}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {searchActive ? <span className="tm-pill">Поиск: {searchQuery.trim()}</span> : null}
-              {filtersActive ? <span className="tm-pill">Filter: {PERIODICITY_LABELS[filter]}</span> : null}
+              {searchActive ? <span className="tm-pill">{copy.searchPill(searchQuery.trim())}</span> : null}
+              {filtersActive ? <span className="tm-pill">{copy.filterPill(copy.periodicityLabels[filter])}</span> : null}
               {hasSearchOrFilters ? (
                 <button
                   type="button"
@@ -3613,7 +3926,7 @@ export function TodayPage() {
                   }}
                   className="tm-button tm-button-ghost tm-button-sm"
                 >
-                  Сбросить
+                  {copy.reset}
                 </button>
               ) : null}
             </div>
@@ -3623,14 +3936,14 @@ export function TodayPage() {
 
           {loading ? (
             <section className="tm-panel p-4">
-              <p className="text-amber-200/80">Загрузка...</p>
+              <p className="text-amber-200/80">{copy.loading}</p>
             </section>
           ) : isFirstUseEmpty ? (
             <>
               <section className="tm-panel p-4">
                 <TaskEmptyState
-                  title="Активных задач на сегодня нет"
-                  text="Добавь новую задачу или возьми что-то из следующего слоя."
+                  title={copy.activeEmptyTitle}
+                  text={copy.activeEmptyText}
                 />
               </section>
             </>
@@ -3644,13 +3957,13 @@ export function TodayPage() {
                 nextPreviewTasks.length === 0 &&
                 visibleCompletedTodayEntries.length === 0 ? (
                   <TaskEmptyState
-                    title="Ничего не найдено"
-                    text="Попробуй изменить поиск или фильтры."
+                    title={copy.noResultsTitle}
+                    text={copy.noResultsText}
                   />
                 ) : (
                   <>
                     {visibleOverdueTasks.length > 0 ? (
-                      <QueueSection title="Просрочено" count={visibleOverdueTasks.length} toneClassName="text-rose-200">
+                      <QueueSection title={copy.overdue} count={visibleOverdueTasks.length} toneClassName="text-rose-200">
                         <div className="tm-task-list-grid">
                           {visibleOverdueTasks.map((task) => renderExecutionCard(task, 'today', true))}
                         </div>
@@ -3658,7 +3971,7 @@ export function TodayPage() {
                     ) : null}
 
                     {visibleDueSoonTasks.length > 0 ? (
-                      <QueueSection title="Скоро дедлайн" count={visibleDueSoonTasks.length}>
+                      <QueueSection title={copy.dueSoonTitle} count={visibleDueSoonTasks.length}>
                         <div className="tm-task-list-grid">
                           {visibleDueSoonTasks.map((task) => renderExecutionCard(task, 'today'))}
                         </div>
@@ -3666,28 +3979,28 @@ export function TodayPage() {
                     ) : null}
 
                     {visibleTodayTasks.length > 0 ? (
-                      <QueueSection title="Сегодня" count={visibleTodayTasks.length}>
+                      <QueueSection title={copy.todayTitle} count={visibleTodayTasks.length}>
                         <div className="tm-task-list-grid">
                           {visibleTodayTasks.map((task) => renderExecutionCard(task, 'today'))}
                         </div>
                       </QueueSection>
                     ) : isTodayDoneForNow ? (
                       <TaskEmptyState
-                        title="На сегодня всё"
-                        text="Основной слой дня пуст. Возьми что-то из следующего слоя."
+                        title={copy.todayDoneTitle}
+                        text={copy.todayDoneText}
                       />
                     ) : !hasSearchOrFilters ? (
                       <TaskEmptyState
-                        title="Активных задач на сегодня нет"
-                        text="Добавь новую задачу или возьми что-то из следующего слоя."
+                        title={copy.activeEmptyTitle}
+                        text={copy.activeEmptyText}
                       />
                     ) : null}
 
                     <section className="tm-panel p-4 space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="text-lg font-semibold tm-title">Далее</h3>
-                          <p className="text-sm text-amber-200/70">Ближайший резерв после Today</p>
+                          <h3 className="text-lg font-semibold tm-title">{copy.nextPreviewTitle}</h3>
+                          <p className="text-sm text-amber-200/70">{copy.nextPreviewSubtitle}</p>
                         </div>
                         <span className="tm-badge tm-badge-note">{nextTasks.length}</span>
                       </div>
@@ -3702,8 +4015,8 @@ export function TodayPage() {
                                 {(() => {
                                   const nextDeadlineLabel = formatDeadline(getNextDeadlineDate(task));
                                   return nextDeadlineLabel
-                                    ? `${PERIODICITY_LABELS[task.periodicity]} · ${nextDeadlineLabel}`
-                                    : PERIODICITY_LABELS[task.periodicity];
+                                    ? `${copy.periodicityLabels[task.periodicity]} · ${nextDeadlineLabel}`
+                                    : copy.periodicityLabels[task.periodicity];
                                 })()}
                               </p>
                             </div>
@@ -3711,12 +4024,12 @@ export function TodayPage() {
                         </div>
                       ) : (
                         <TaskEmptyState
-                          title="Следующий слой пуст"
-                          text="Задачи из очереди Next появятся здесь."
+                          title={copy.nextEmptyTitle}
+                          text={copy.nextEmptyText}
                         />
                       )}
                       <button type="button" onClick={() => openQueueTab('next')} className="tm-button tm-button-ghost tm-button-sm w-full">
-                        Открыть Next
+                        {copy.openNext}
                       </button>
                     </section>
 
@@ -3729,13 +4042,9 @@ export function TodayPage() {
             <section className="tm-panel p-4 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold tm-title">{QUEUE_LABELS[activeQueue]}</h2>
+                  <h2 className="text-lg font-semibold tm-title">{copy.queueLabels[activeQueue]}</h2>
                   <p className="text-sm text-amber-200/70">
-                    {activeQueue === 'inbox'
-                      ? 'Новые задачи и быстрый захват.'
-                      : activeQueue === 'next'
-                      ? 'Ближайший слой после Today.'
-                      : 'Отложенные задачи вне главного потока.'}
+                    {copy.queueDescriptions[activeQueue]}
                   </p>
                 </div>
                 <span className="tm-badge tm-badge-note">{queueCounts[activeQueue]}</span>
@@ -3747,23 +4056,23 @@ export function TodayPage() {
                 </div>
               ) : hasSearchOrFilters ? (
                 <TaskEmptyState
-                  title="Ничего не найдено"
-                  text="Попробуй изменить поиск или фильтры."
+                  title={copy.noResultsTitle}
+                  text={copy.noResultsText}
                 />
               ) : activeQueue === 'inbox' ? (
                 <TaskEmptyState
-                  title="Входящие пусты"
-                  text="Новые задачи появятся здесь, пока ты их не разберёшь."
+                  title={copy.inboxEmptyTitle}
+                  text={copy.inboxEmptyText}
                 />
               ) : activeQueue === 'backlog' ? (
                 <TaskEmptyState
-                  title="Запас пуст"
-                  text="Отложенных задач пока нет."
+                  title={copy.backlogEmptyTitle}
+                  text={copy.backlogEmptyText}
                 />
               ) : (
                 <TaskEmptyState
-                  title="Следующий слой пуст"
-                  text="Когда появятся задачи на потом, они окажутся здесь."
+                  title={copy.nextEmptyTitle}
+                  text={copy.nextQueueEmptyText}
                 />
               )}
             </section>
