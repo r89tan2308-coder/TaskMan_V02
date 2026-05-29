@@ -543,11 +543,13 @@ export function ShopPage() {
                           </p>
                           <div className="space-y-1">
                             <div
-                              className="tm-progress w-full"
+                              className="tm-progress tm-progress-reward w-full"
                               role="progressbar"
+                              aria-label={copy.xpProgress(xp, reward.cost)}
                               aria-valuenow={progressValue}
                               aria-valuemin={0}
                               aria-valuemax={100}
+                              aria-valuetext={copy.xpProgress(xp, reward.cost)}
                             >
                               <div
                                 className="tm-progress-fill"

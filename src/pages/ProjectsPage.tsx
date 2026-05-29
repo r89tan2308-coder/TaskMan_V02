@@ -200,14 +200,18 @@ const getProjectStatusChipClass = (status: ProjectStatus) => {
 };
 
 function ProjectProgressBar({ value }: { value: number }) {
+  const { locale } = useLocale();
+  const copy = PROJECTS_COPY[locale];
   const normalized = Math.max(0, Math.min(100, Math.round(value)));
   return (
     <div
-      className="tm-progress w-full"
+      className="tm-progress tm-progress-project w-full"
       role="progressbar"
+      aria-label={copy.progress}
       aria-valuenow={normalized}
       aria-valuemin={0}
       aria-valuemax={100}
+      aria-valuetext={`${normalized}%`}
     >
       <div className="tm-progress-fill" style={{ width: `${normalized}%` }} />
       <span className="tm-progress-value">{normalized}%</span>

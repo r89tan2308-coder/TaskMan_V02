@@ -1288,7 +1288,7 @@ export function SkillsPage() {
                           >
                             {skill.name}
                           </button>
-                          <div className="tm-stat-meter tm-stat-meter-skills" style={style}>
+                          <div className="tm-stat-meter tm-stat-meter-skills tm-progress-skill" style={style}>
                             <div className="tm-stat-meter-fill" />
                           </div>
                           <span className="tm-stat-value">{clamped}%</span>

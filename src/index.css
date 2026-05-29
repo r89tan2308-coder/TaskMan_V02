@@ -445,6 +445,10 @@
     justify-content: center;
   }
 
+  .tm-progress-track {
+    width: 100%;
+  }
+
   .tm-progress::after {
     content: '';
     position: absolute;
@@ -477,6 +481,37 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
     line-height: 1;
     pointer-events: none;
+    max-width: calc(100% - 0.5rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tm-progress-sm {
+    height: 0.52rem;
+  }
+
+  .tm-progress-lg {
+    height: 0.85rem;
+  }
+
+  .tm-progress-success,
+  .tm-progress-project {
+    --tm-progress-fill-start: #84c98a;
+    --tm-progress-fill-end: var(--tm-quest-green-bright);
+  }
+
+  .tm-progress-warning,
+  .tm-progress-day,
+  .tm-progress-reward {
+    --tm-progress-fill-start: var(--tm-gold-bright);
+    --tm-progress-fill-end: var(--tm-gold);
+  }
+
+  .tm-progress-danger {
+    --tm-progress-tick: rgba(255, 198, 178, 0.25);
+    --tm-progress-fill-start: #c95a47;
+    --tm-progress-fill-end: var(--tm-quest-red);
   }
 
   .tm-progress-muted {
@@ -666,6 +701,11 @@
   }
 
   .tm-stat-meter-skills {
+    --tm-meter-start: #6fb7c1;
+    --tm-meter-end: #2f6a74;
+  }
+
+  .tm-stat-meter.tm-progress-skill {
     --tm-meter-start: #6fb7c1;
     --tm-meter-end: #2f6a74;
   }

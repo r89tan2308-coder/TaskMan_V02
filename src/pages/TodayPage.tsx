@@ -734,11 +734,12 @@ function TaskProgressBar({ value, muted }: { value: number; muted?: boolean }) {
   const normalizedValue = normalizeProgressValue(value);
   return (
     <div
-      className={`tm-progress w-full ${muted ? 'tm-progress-muted' : ''}`}
+      className={`tm-progress tm-progress-sm w-full ${muted ? 'tm-progress-muted' : ''}`}
       role="progressbar"
       aria-valuenow={normalizedValue}
       aria-valuemin={0}
       aria-valuemax={100}
+      aria-valuetext={`${normalizedValue}%`}
     >
       <div className="tm-progress-fill" style={{ width: `${normalizedValue}%` }} />
       <span className="tm-progress-value">{normalizedValue}%</span>
@@ -748,16 +749,18 @@ function TaskProgressBar({ value, muted }: { value: number; muted?: boolean }) {
 
 function ChecklistProgressBar({ value, muted }: { value: number; muted?: boolean }) {
   const percent = clampPercent(value);
+  const roundedPercent = Math.round(percent);
   return (
     <div
-      className={`tm-progress w-full ${muted ? 'tm-progress-muted' : ''}`}
+      className={`tm-progress tm-progress-sm w-full ${muted ? 'tm-progress-muted' : 'tm-progress-success'}`}
       role="progressbar"
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}
+      aria-valuetext={`${roundedPercent}%`}
     >
       <div className="tm-progress-fill" style={{ width: `${percent}%` }} />
-      <span className="tm-progress-value">{Math.round(percent)}%</span>
+      <span className="tm-progress-value">{roundedPercent}%</span>
     </div>
   );
 }
@@ -766,11 +769,12 @@ function RewardProgressBar({ value }: { value: number }) {
   const normalizedValue = clampPercent(value);
   return (
     <div
-      className="tm-progress w-full"
+      className="tm-progress tm-progress-reward w-full"
       role="progressbar"
       aria-valuenow={normalizedValue}
       aria-valuemin={0}
       aria-valuemax={100}
+      aria-valuetext={`${Math.round(normalizedValue)}%`}
     >
       <div className="tm-progress-fill" style={{ width: `${normalizedValue}%` }} />
       <span className="tm-progress-value">{Math.round(normalizedValue)}%</span>
@@ -805,7 +809,7 @@ function TodayDayProgressBar({
       } ${overdue > 0 ? 'tm-today-day-progress-has-overdue' : ''}`}
     >
       <div
-        className="tm-progress w-full"
+        className="tm-progress tm-progress-lg tm-progress-day w-full"
         role="progressbar"
         aria-label={labels.aria}
         aria-valuenow={Math.round(progressPercent)}
