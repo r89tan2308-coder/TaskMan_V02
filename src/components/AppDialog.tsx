@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode
 } from 'react';
+import { useLocale, type AppLocale } from '../i18n/appLocale';
 
 type DialogTone = 'default' | 'danger';
 
@@ -35,6 +36,23 @@ type AppDialogApi = {
   alert: (input: AppDialogInput) => Promise<void>;
   confirm: (input: AppDialogInput) => Promise<boolean>;
 };
+
+const APP_DIALOG_COPY = {
+  ru: {
+    confirmTitle: 'Подтверждение',
+    alertTitle: 'Сообщение',
+    confirm: 'Подтвердить',
+    cancel: 'Отмена',
+    ok: 'OK'
+  },
+  en: {
+    confirmTitle: 'Confirmation',
+    alertTitle: 'Message',
+    confirm: 'Confirm',
+    cancel: 'Cancel',
+    ok: 'OK'
+  }
+} satisfies Record<AppLocale, Record<string, string>>;
 
 let registeredDialogApi: AppDialogApi | null = null;
 
@@ -77,6 +95,8 @@ export const showAppConfirm = async (input: AppDialogInput) => {
 };
 
 export function AppDialogProvider({ children }: { children: ReactNode }) {
+  const { locale } = useLocale();
+  const copy = APP_DIALOG_COPY[locale];
   const [dialogs, setDialogs] = useState<PendingDialog[]>([]);
   const nextIdRef = useRef(1);
   const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -147,9 +167,9 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
   }, [currentDialog, settleDialog]);
 
   const isConfirm = currentDialog?.kind === 'confirm';
-  const title = currentDialog?.title ?? (isConfirm ? 'Подтверждение' : 'Сообщение');
-  const confirmLabel = currentDialog?.confirmLabel ?? 'OK';
-  const cancelLabel = currentDialog?.cancelLabel ?? 'Отмена';
+  const title = currentDialog?.title ?? (isConfirm ? copy.confirmTitle : copy.alertTitle);
+  const confirmLabel = currentDialog?.confirmLabel ?? (isConfirm ? copy.confirm : copy.ok);
+  const cancelLabel = currentDialog?.cancelLabel ?? copy.cancel;
   const themeClassName = currentDialog ? getPortalThemeClassName() : '';
   const titleId = currentDialog ? `tm-service-dialog-title-${currentDialog.id}` : undefined;
   const messageId = currentDialog ? `tm-service-dialog-message-${currentDialog.id}` : undefined;
