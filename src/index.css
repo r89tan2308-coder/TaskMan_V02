@@ -2598,6 +2598,36 @@
     text-align: center;
   }
 
+  .tm-analytics-top-list {
+    min-width: 0;
+  }
+
+  .tm-analytics-top-row {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .tm-analytics-top-title {
+    min-width: 0;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tm-app .tm-chip.tm-analytics-xp-chip {
+    flex: 0 0 auto;
+    min-width: max-content;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
   .tm-analytics-card {
     padding: 1rem;
   }
@@ -2713,7 +2743,45 @@
     }
 
     .tm-analytics-page .tm-line-chart-labels {
-      gap: 0.12rem;
+      justify-content: space-between;
+      gap: 0.18rem;
+    }
+
+    .tm-analytics-page .tm-line-chart-label:empty {
+      display: none;
+    }
+
+    .tm-app .tm-analytics-page .tm-line-chart-label {
+      flex: 0 1 auto;
+      min-width: 1.8rem;
+      max-width: 3.4rem;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .tm-analytics-page .tm-line-chart-labels-month .tm-line-chart-label {
+      min-width: 1.3rem;
+    }
+
+    .tm-analytics-top-row {
+      align-items: start;
+      gap: 0.55rem;
+    }
+
+    .tm-analytics-top-title {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .tm-app .tm-chip.tm-analytics-xp-chip {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      font-size: 0.68rem;
     }
 
     .tm-app-progress-analytics .tm-pet {
@@ -2751,6 +2819,27 @@
 
     .tm-analytics-page .tm-line-chart {
       height: 8.55rem;
+    }
+
+    .tm-app .tm-analytics-page .tm-line-chart-label {
+      min-width: 1.45rem;
+      max-width: 2.75rem;
+      font-size: 0.54rem;
+      letter-spacing: 0;
+    }
+
+    .tm-analytics-page .tm-line-chart-labels-year .tm-line-chart-label,
+    .tm-analytics-page .tm-line-chart-labels-quarter .tm-line-chart-label {
+      min-width: 1.8rem;
+    }
+
+    .tm-analytics-top-row {
+      gap: 0.45rem;
+    }
+
+    .tm-app .tm-chip.tm-analytics-xp-chip {
+      padding-left: 0.44rem;
+      padding-right: 0.44rem;
     }
   }
 

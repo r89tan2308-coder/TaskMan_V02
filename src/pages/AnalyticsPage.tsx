@@ -638,7 +638,7 @@ export function AnalyticsPage() {
                         <strong>{formatMetricValue(monthlyActivePoint.safeValue, metric, copy)}</strong>
                       </div>
                     ) : null}
-                    <div className="tm-line-chart-labels">
+                    <div className="tm-line-chart-labels tm-line-chart-labels-month">
                       {monthlySeries.map((point, index) => {
                         const label = formatMonthDay(point.date);
                         const showLabel = index % 5 === 0 || index === monthlySeries.length - 1;
@@ -744,7 +744,7 @@ export function AnalyticsPage() {
                         <strong>{formatMetricValue(quarterActivePoint.safeValue, metric, copy)}</strong>
                       </div>
                     ) : null}
-                    <div className="tm-line-chart-labels">
+                    <div className="tm-line-chart-labels tm-line-chart-labels-quarter">
                       {quarterSeries.map((point) => {
                         const value = toSafeValue(point.value);
                         return (
@@ -846,7 +846,7 @@ export function AnalyticsPage() {
                         <strong>{formatMetricValue(yearActivePoint.safeValue, metric, copy)}</strong>
                       </div>
                     ) : null}
-                    <div className="tm-line-chart-labels">
+                    <div className="tm-line-chart-labels tm-line-chart-labels-year">
                       {yearSeries.map((point, index) => {
                         const value = toSafeValue(point.value);
                         const showLabel =
@@ -882,11 +882,15 @@ export function AnalyticsPage() {
                 {topTasks.length === 0 ? (
                   <p className="text-amber-200/70 text-sm">{copy.noTasks}</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="tm-analytics-top-list space-y-2">
                     {topTasks.map(({ task, value }) => (
-                      <div key={task.id} className="flex items-center justify-between gap-2">
-                        <p className="text-amber-50 font-semibold truncate">{task.title}</p>
-                        <span className="tm-pill tm-chip tm-chip-xp">{value} XP</span>
+                      <div key={task.id} className="tm-analytics-top-row">
+                        <p className="tm-analytics-top-title text-amber-50 font-semibold">
+                          {task.title}
+                        </p>
+                        <span className="tm-pill tm-chip tm-chip-xp tm-analytics-xp-chip">
+                          {value} XP
+                        </span>
                       </div>
                     ))}
                   </div>
