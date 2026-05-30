@@ -5384,8 +5384,11 @@
 }
 
 .tm-today-reward-title {
+  min-width: 0;
   margin-top: 0;
   line-height: 1.1;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .tm-today-reward-header-remaining {
@@ -5396,7 +5399,9 @@
   text-align: right;
   white-space: nowrap;
   overflow: visible;
+  overflow-wrap: anywhere;
   text-overflow: clip;
+  line-height: 1.25;
 }
 
 .tm-today-reward-meta {
@@ -5416,6 +5421,7 @@
   font-size: 0.78rem;
   line-height: 1.35;
   color: #c4ad86;
+  overflow-wrap: anywhere;
 }
 
 .tm-today-reward-subline {
@@ -5462,6 +5468,122 @@
 
 .tm-today-reward-strip .tm-progress {
   margin-top: 0.1rem;
+}
+
+.tm-app.tm-app-today .tm-panel-soft.tm-completed-today-section {
+  border-color: rgba(111, 83, 52, 0.46);
+  background: linear-gradient(180deg, rgba(42, 36, 31, 0.82), rgba(24, 20, 17, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 8px 14px rgba(0, 0, 0, 0.34);
+}
+
+.tm-completed-today-section .tm-title {
+  font-size: 1rem;
+  line-height: 1.2;
+  color: #ead8b6;
+}
+
+.tm-completed-today-section .tm-summary-chevron {
+  opacity: 0.68;
+}
+
+.tm-completed-today-item {
+  border-color: rgba(120, 90, 55, 0.44);
+  background: linear-gradient(180deg, rgba(31, 27, 24, 0.72), rgba(17, 14, 12, 0.8));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 5px 10px rgba(0, 0, 0, 0.28);
+}
+
+.tm-completed-today-item::before {
+  opacity: 0.14;
+}
+
+.tm-completed-today-item .tm-task-title {
+  font-size: 0.9rem;
+  color: rgba(244, 231, 197, 0.78);
+}
+
+.tm-completed-today-item .tm-task-title-muted {
+  opacity: 0.82;
+}
+
+.tm-app .tm-button.tm-completed-today-undo,
+.tm-app.tm-theme-classic .tm-button.tm-completed-today-undo {
+  min-height: 1.8rem;
+  padding: 0.28rem 0.58rem;
+  font-size: 0.72rem;
+  line-height: 1;
+  opacity: 0.82;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 3px 8px rgba(0, 0, 0, 0.28);
+}
+
+.tm-app .tm-button.tm-completed-today-undo:hover,
+.tm-app .tm-button.tm-completed-today-undo:focus-visible {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .tm-app .tm-today-reward-card {
+    gap: 0.7rem;
+  }
+
+  .tm-app .tm-today-reward-card .tm-today-summary-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+
+  .tm-app .tm-today-reward-header-remaining {
+    justify-self: start;
+    max-width: 100%;
+    margin: 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .tm-app .tm-today-reward-meta {
+    gap: 0.25rem;
+  }
+
+  .tm-app .tm-today-reward-progress-value {
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+
+  .tm-app .tm-today-reward-strip .tm-progress {
+    margin-top: 0.22rem;
+  }
+
+  .tm-app .tm-completed-today-item {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .tm-app .tm-completed-today-undo {
+    align-self: flex-start;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .tm-app .tm-today-reward-card {
+    gap: 0.58rem;
+  }
+
+  .tm-app .tm-today-reward-title {
+    font-size: 1rem;
+    line-height: 1.12;
+  }
+
+  .tm-app .tm-today-reward-progress-value {
+    font-size: 0.95rem;
+  }
 }
 
 @media (min-width: 960px) {

@@ -141,10 +141,14 @@ const TODAY_COPY = {
     logSaving: 'Запись...',
     logAction: 'Записать',
     calendarAction: 'Календарь',
+    calendarTitle: 'Добавить в календарь',
+    downloadIcs: 'Скачать .ics',
     edit: 'Изменить',
     skip: 'Пропустить',
     delete: 'Удалить',
     deleting: 'Удаление...',
+    newTaskTitle: 'Новая задача',
+    editTaskTitle: 'Редактировать задачу',
     queue: 'Очередь',
     bucketActionLabels: {
       today: 'В Сегодня',
@@ -158,6 +162,54 @@ const TODAY_COPY = {
     rewardUnlocked: 'Награда уже открыта',
     rewardEmptyHint: 'Добавь награду, и здесь сразу появится ближайшая цель с прогрессом.',
     currentXp: (xp: number) => `Сейчас у тебя ${xp} XP`,
+    progress: 'Прогресс',
+    skills: 'Навыки',
+    skillSeparatorHint: 'Через запятую.',
+    checklist: 'Чеклист',
+    expandChecklist: 'Развернуть чеклист',
+    collapseChecklist: 'Свернуть чеклист',
+    noComment: 'Без комментариев',
+    quotaReached: 'Квота закрыта',
+    deadline: 'Дедлайн',
+    reminder: 'Напоминание',
+    relativeTime: {
+      inMinutes: (minutes: number) => `Через ${minutes} мин`,
+      inHours: (hours: number) => `Через ${hours} ч`,
+      todayAt: (time: string) => `Сегодня в ${time}`,
+      today: 'Сегодня',
+      tomorrowAt: (time: string) => `Завтра в ${time}`,
+      tomorrow: 'Завтра',
+      overdueDays: (days: number) => `Просрочено на ${days} д.`,
+      overdueHours: (hours: number) => `Просрочено на ${hours} ч.`,
+      overdueLessThanHour: 'Просрочено меньше чем на час'
+    },
+    completedTodayTitle: (count: number) => `Сделано сегодня · ${count}`,
+    completedTodayEarned: 'Уже заработанный прогресс за день',
+    completedTodayEmpty: 'Закрытые задачи будут появляться здесь',
+    completedEarlier: (count: number) => `Сделано ранее${count > 0 ? ` · ${count}` : ''}`,
+    completedHistoryShown: (count: number) => `Показаны последние ${count} записей.`,
+    noCompletedHistory: 'Ранних выполнений пока нет.',
+    undo: 'Отменить',
+    undoing: 'Отмена...',
+    streakLabel: (current: number, best: number) =>
+      best > current ? `Стрик ${current} · рекорд ${best}` : `Стрик ${current}`,
+    completionFeedbackProject: 'Проект завершён',
+    completionFeedbackTask: (title: string) => `Сделано: ${title}`,
+    invalidEventDate: 'Укажите корректную дату и время события.',
+    unableMarkMissed: 'Не удалось отметить задачу как пропущенную.',
+    unableCompleteTask: 'Не удалось завершить задачу.',
+    unableUndoTask: 'Не удалось отменить выполнение задачи.',
+    removeHistoryConfirm: 'Убрать эту запись о выполнении из истории?',
+    removeHistoryLabel: 'Убрать',
+    unableRemoveHistory: 'Не удалось убрать запись из истории.',
+    deleteConfirm: (title: string) => `Удалить задачу "${title}"?`,
+    deleteConfirmLabel: 'Удалить',
+    unableMoveTask: 'Не удалось перенести задачу.',
+    taskDeletedLedgerFailed: 'Задача удалена, но запись в журнал добавить не удалось.',
+    failedDeleteTask: 'Не удалось удалить задачу.',
+    failedUpdateProgress: 'Не удалось обновить прогресс.',
+    failedUpdateChecklist: 'Не удалось обновить чеклист.',
+    failedReorderTasks: 'Не удалось изменить порядок задач.',
     allFilter: 'Все',
     dayTitle: 'Как идёт день',
     done: 'Сделано',
@@ -265,10 +317,14 @@ const TODAY_COPY = {
     logSaving: 'Logging...',
     logAction: 'Log',
     calendarAction: 'Calendar',
+    calendarTitle: 'Add to Calendar',
+    downloadIcs: 'Download .ics',
     edit: 'Edit',
     skip: 'Skip',
     delete: 'Delete',
     deleting: 'Deleting...',
+    newTaskTitle: 'New task',
+    editTaskTitle: 'Edit task',
     queue: 'Queue',
     bucketActionLabels: {
       today: 'To Today',
@@ -282,6 +338,54 @@ const TODAY_COPY = {
     rewardUnlocked: 'Reward already unlocked',
     rewardEmptyHint: 'Add a reward and the nearest goal will appear here with progress.',
     currentXp: (xp: number) => `You have ${xp} XP now`,
+    progress: 'Progress',
+    skills: 'Skills',
+    skillSeparatorHint: 'Separate with commas.',
+    checklist: 'Checklist',
+    expandChecklist: 'Expand checklist',
+    collapseChecklist: 'Collapse checklist',
+    noComment: 'No comment',
+    quotaReached: 'Quota reached',
+    deadline: 'Deadline',
+    reminder: 'Reminder',
+    relativeTime: {
+      inMinutes: (minutes: number) => `In ${minutes} min`,
+      inHours: (hours: number) => `In ${hours} h`,
+      todayAt: (time: string) => `Today at ${time}`,
+      today: 'Today',
+      tomorrowAt: (time: string) => `Tomorrow at ${time}`,
+      tomorrow: 'Tomorrow',
+      overdueDays: (days: number) => `Overdue by ${days} d`,
+      overdueHours: (hours: number) => `Overdue by ${hours} h`,
+      overdueLessThanHour: 'Overdue by less than an hour'
+    },
+    completedTodayTitle: (count: number) => `Completed today · ${count}`,
+    completedTodayEarned: 'Progress already earned today',
+    completedTodayEmpty: 'Completed tasks will appear here',
+    completedEarlier: (count: number) => `Completed earlier${count > 0 ? ` · ${count}` : ''}`,
+    completedHistoryShown: (count: number) => `Showing the latest ${count} entries.`,
+    noCompletedHistory: 'No earlier completions yet.',
+    undo: 'Undo',
+    undoing: 'Undoing...',
+    streakLabel: (current: number, best: number) =>
+      best > current ? `Streak ${current} · best ${best}` : `Streak ${current}`,
+    completionFeedbackProject: 'Project completed',
+    completionFeedbackTask: (title: string) => `Done: ${title}`,
+    invalidEventDate: 'Enter a valid event date and time.',
+    unableMarkMissed: 'Could not mark the task as missed.',
+    unableCompleteTask: 'Could not complete the task.',
+    unableUndoTask: 'Could not undo the task completion.',
+    removeHistoryConfirm: 'Remove this completion entry from history?',
+    removeHistoryLabel: 'Remove',
+    unableRemoveHistory: 'Could not remove the history entry.',
+    deleteConfirm: (title: string) => `Delete task "${title}"?`,
+    deleteConfirmLabel: 'Delete',
+    unableMoveTask: 'Could not move the task.',
+    taskDeletedLedgerFailed: 'Task deleted, but the ledger record could not be added.',
+    failedDeleteTask: 'Could not delete the task.',
+    failedUpdateProgress: 'Could not update progress.',
+    failedUpdateChecklist: 'Could not update the checklist.',
+    failedReorderTasks: 'Could not reorder tasks.',
     allFilter: 'All',
     dayTitle: 'How the day is going',
     done: 'Done',
@@ -627,7 +731,12 @@ const shouldSurfaceTaskInToday = (task: Task, now = new Date()) => {
   return Boolean(currentDeadline && isSameLocalDate(currentDeadline, now));
 };
 
-const getDueSoonMeta = (deadline: Date | null, now = new Date()) => {
+const getDueSoonMeta = (
+  deadline: Date | null,
+  now = new Date(),
+  relativeTime = TODAY_COPY.ru.relativeTime,
+  locale: AppLocale = 'ru'
+) => {
   if (!deadline) return null;
   const diffMs = deadline.getTime() - now.getTime();
   if (diffMs <= 0 || diffMs > DUE_SOON_WINDOW_MS) {
@@ -636,28 +745,28 @@ const getDueSoonMeta = (deadline: Date | null, now = new Date()) => {
 
   if (diffMs <= HOUR_MS) {
     const minutes = Math.max(1, Math.ceil(diffMs / MINUTE_MS));
-    return { label: `Через ${minutes} мин`, urgency: 'critical' as const };
+    return { label: relativeTime.inMinutes(minutes), urgency: 'critical' as const };
   }
 
   if (diffMs <= 6 * HOUR_MS) {
     const hours = Math.max(1, Math.ceil(diffMs / HOUR_MS));
-    return { label: `Через ${hours} ч`, urgency: 'urgent' as const };
+    return { label: relativeTime.inHours(hours), urgency: 'urgent' as const };
   }
 
   if (isSameLocalDate(deadline, now)) {
-    const timeLabel = formatTimeOfDay(deadline);
-    return { label: timeLabel ? `Сегодня в ${timeLabel}` : 'Сегодня', urgency: 'soon' as const };
+    const timeLabel = formatTimeOfDay(deadline, locale);
+    return { label: timeLabel ? relativeTime.todayAt(timeLabel) : relativeTime.today, urgency: 'soon' as const };
   }
 
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   if (isSameLocalDate(deadline, tomorrow)) {
-    const timeLabel = formatTimeOfDay(deadline);
-    return { label: timeLabel ? `Завтра в ${timeLabel}` : 'Завтра', urgency: 'soon' as const };
+    const timeLabel = formatTimeOfDay(deadline, locale);
+    return { label: timeLabel ? relativeTime.tomorrowAt(timeLabel) : relativeTime.tomorrow, urgency: 'soon' as const };
   }
 
   const hours = Math.max(1, Math.ceil(diffMs / HOUR_MS));
-  return { label: `Через ${hours} ч`, urgency: 'soon' as const };
+  return { label: relativeTime.inHours(hours), urgency: 'soon' as const };
 };
 
 const shouldSurfaceTaskDueSoon = (task: Task, now = new Date()) => {
@@ -710,24 +819,34 @@ const getReminderDate = (deadline: Date | null, offsetMinutes?: number) => {
   return new Date(deadline.getTime() - totalMinutes * 60000);
 };
 
-const formatDeadline = (value?: string | Date | null) => {
+const getDateTimeLocale = (locale: AppLocale) => (locale === 'ru' ? 'ru-RU' : 'en-US');
+
+const formatDeadline = (value?: string | Date | null, locale: AppLocale = 'ru') => {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return `${pad2(date.getDate())}.${pad2(date.getMonth() + 1)} ${pad2(date.getHours())}:${pad2(
-    date.getMinutes()
-  )}`;
+  return new Intl.DateTimeFormat(getDateTimeLocale(locale), {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
 };
 
-const formatOverdueLabel = (deadline: Date | null, now = new Date()) => {
+const formatOverdueLabel = (
+  deadline: Date | null,
+  now = new Date(),
+  relativeTime = TODAY_COPY.ru.relativeTime
+) => {
   if (!deadline) return null;
   const diffMs = now.getTime() - deadline.getTime();
   if (diffMs <= 0) return null;
   const hours = Math.floor(diffMs / 3600000);
   const days = Math.floor(diffMs / 86400000);
-  if (days >= 1) return `Просрочено на ${days} д.`;
-  if (hours >= 1) return `Просрочено на ${hours} ч.`;
-  return 'Просрочено меньше чем на час';
+  if (days >= 1) return relativeTime.overdueDays(days);
+  if (hours >= 1) return relativeTime.overdueHours(hours);
+  return relativeTime.overdueLessThanHour;
 };
 
 function TaskProgressBar({ value, muted }: { value: number; muted?: boolean }) {
@@ -836,6 +955,8 @@ function TaskProgressControls({
   disabled: boolean;
   showLabel?: boolean;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   const handleRangeChange = (event: ChangeEvent<HTMLInputElement>) => {
     onChange(normalizeProgressValue(Number(event.target.value)));
   };
@@ -846,7 +967,7 @@ function TaskProgressControls({
 
   return (
     <div className="space-y-2">
-      {showLabel ? <p className="tm-task-details-title">Прогресс</p> : null}
+      {showLabel ? <p className="tm-task-details-title">{copy.progress}</p> : null}
       <div className="space-y-2">
         <input
           type="range"
@@ -954,6 +1075,8 @@ function SkillTagsInput({
   disabled?: boolean;
   placeholder?: string;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   const [focused, setFocused] = useState(false);
   const { current, prefixTokens } = useMemo(() => splitSkillTagsInput(value), [value]);
   const existing = useMemo(
@@ -982,7 +1105,7 @@ function SkillTagsInput({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm tm-label mb-1">Навыки</label>
+      <label className="block text-sm tm-label mb-1">{copy.skills}</label>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -1015,7 +1138,7 @@ function SkillTagsInput({
           ))}
         </div>
       ) : null}
-      <p className="text-xs text-amber-200/70">Через запятую.</p>
+      <p className="text-xs text-amber-200/70">{copy.skillSeparatorHint}</p>
     </div>
   );
 }
@@ -1046,6 +1169,8 @@ function AddTaskModal({
   skillOptions: string[];
   projects: Project[];
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   return (
     <TaskEditorModal
       open={open}
@@ -1054,7 +1179,7 @@ function AddTaskModal({
       onSaved={onCreated}
       projects={projects}
       skillOptions={skillOptions}
-      modalTitle="Новая задача"
+      modalTitle={copy.newTaskTitle}
       defaultBucket="inbox"
     />
   );
@@ -1075,6 +1200,8 @@ function CalendarModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   const titleId = useId();
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -1109,11 +1236,11 @@ function CalendarModal({
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <h2 id={titleId} className="text-xl font-semibold tm-title mb-2">Add to Calendar</h2>
+        <h2 id={titleId} className="text-xl font-semibold tm-title mb-2">{copy.calendarTitle}</h2>
         <p className="text-sm text-amber-200/80 mb-4">{task.title}</p>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm tm-label mb-1">Due datetime</label>
+            <label className="block text-sm tm-label mb-1">{copy.dateTime}</label>
             <input
               type="datetime-local"
               value={value}
@@ -1127,14 +1254,14 @@ function CalendarModal({
               onClick={onCancel}
               className="tm-button tm-button-ghost"
             >
-              Cancel
+              {copy.cancel}
             </button>
             <button
               type="button"
               onClick={onConfirm}
               className="tm-button tm-button-gold"
             >
-              Download .ics
+              {copy.downloadIcs}
             </button>
           </div>
         </div>
@@ -1248,6 +1375,8 @@ function EditTaskModal({
   skillOptions: string[];
   projects: Project[];
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   return (
     <TaskEditorModal
       open={open}
@@ -1257,7 +1386,7 @@ function EditTaskModal({
       onSaved={onSaved}
       projects={projects}
       skillOptions={skillOptions}
-      modalTitle="Редактировать задачу"
+      modalTitle={copy.editTaskTitle}
       defaultBucket="today"
     />
   );
@@ -1315,11 +1444,11 @@ function TaskCard({
   const rarityStyle = RARITY_STYLES[task.rarity] ?? RARITY_STYLES.common;
   const taskValue = getTaskValue(task);
   const deadlineDate = getNextDeadlineDate(task);
-  const deadlineLabel = formatDeadline(deadlineDate);
+  const deadlineLabel = formatDeadline(deadlineDate, locale);
   const reminderDate = getReminderDate(deadlineDate, task.reminder?.offsetMinutes);
-  const reminderLabel = formatDeadline(reminderDate);
+  const reminderLabel = formatDeadline(reminderDate, locale);
   const commentValue = task.comment?.trim();
-  const commentText = commentValue ? commentValue : 'Без комментариев';
+  const commentText = commentValue ? commentValue : copy.noComment;
   const hasComment = Boolean(commentValue);
   const isArchived = Boolean(task.archived);
   const progressEnabled = Boolean(task.progressEnabled);
@@ -1334,7 +1463,7 @@ function TaskCard({
   const hasChecklist = checklistItems.length > 0;
   const checklistProgress = getChecklistProgressPercent(checklistItems);
   const quotaReached = Boolean(quotaStatus?.reached);
-  const quotaPeriodLabel = quotaStatus?.per === 'month' ? 'месяц' : 'неделя';
+  const quotaPeriodLabel = quotaStatus?.per === 'month' ? copy.month : copy.week;
   const showDetails = !hasChecklist || expanded;
   const taskValueToneClass = getTaskValueToneClass(taskValue);
   const titleClassName = `tm-task-title ${taskValueToneClass} ${
@@ -1369,7 +1498,7 @@ function TaskCard({
               handleToggle();
             }
           }}
-          title="Drag to reorder"
+          title={copy.dragDetailsHint}
         >
         <div className="flex items-center gap-2">
           {hasChecklist ? (
@@ -1380,7 +1509,7 @@ function TaskCard({
                 handleToggle();
               }}
               className="tm-button tm-button-ghost tm-button-sm px-2"
-              aria-label={expanded ? 'Collapse checklist' : 'Expand checklist'}
+              aria-label={expanded ? copy.collapseChecklist : copy.expandChecklist}
               disabled={busy}
             >
               {expanded ? 'v' : '>'}
@@ -1420,11 +1549,11 @@ function TaskCard({
         {quotaStatus ? (
           <div className="space-y-1">
             <p className="text-xs text-amber-200/70">
-              Квота: {quotaStatus.done} / {quotaStatus.count} · {quotaPeriodLabel}
+              {copy.quota}: {quotaStatus.done} / {quotaStatus.count} · {quotaPeriodLabel}
             </p>
             <ChecklistProgressBar value={quotaStatus.percent} />
             {quotaReached ? (
-              <p className="text-xs text-amber-200/70">Quota reached</p>
+              <p className="text-xs text-amber-200/70">{copy.quotaReached}</p>
             ) : null}
           </div>
         ) : null}
@@ -1432,13 +1561,13 @@ function TaskCard({
           <p className="text-sm text-amber-200/70 flex flex-wrap gap-3">
             {deadlineLabel ? (
               <span className="inline-flex items-center gap-1">
-                <span role="img" aria-label="Дедлайн">⏰</span>
+                <span role="img" aria-label={copy.deadline}>⏰</span>
                 {deadlineLabel}
               </span>
             ) : null}
             {reminderLabel ? (
               <span className="inline-flex items-center gap-1">
-                <span role="img" aria-label="Напоминание">🔔</span>
+                <span role="img" aria-label={copy.reminder}>🔔</span>
                 {reminderLabel}
               </span>
             ) : null}
@@ -1468,7 +1597,7 @@ function TaskCard({
         <div className="tm-task-details space-y-3">
           {hasChecklist ? (
             <div className="space-y-2">
-              <p className="tm-task-details-title">Checklist</p>
+              <p className="tm-task-details-title">{copy.checklist}</p>
               <div className="space-y-2">
                 {checklistItems.map((item) => (
                   <label key={item.id} className="flex items-start gap-2 text-sm">
@@ -1495,7 +1624,7 @@ function TaskCard({
             />
           ) : null}
           <div className={hasComment ? 'tm-task-comment-panel' : undefined}>
-            <p className="tm-task-details-title">Комментарий</p>
+            <p className="tm-task-details-title">{copy.comment}</p>
             <p className="tm-task-details-text whitespace-pre-wrap">{commentText}</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1504,21 +1633,21 @@ function TaskCard({
               disabled={busy}
               className="tm-button tm-button-steel tm-button-sm"
             >
-              Calendar
+              {copy.calendarAction}
             </button>
             <button
               onClick={() => onEdit(task)}
               disabled={busy}
               className="tm-button tm-button-ghost tm-button-sm"
             >
-              Edit
+              {copy.edit}
             </button>
             <button
               onClick={() => onDelete(task)}
               disabled={busy}
               className="tm-button tm-button-danger tm-button-sm"
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? copy.deleting : copy.delete}
             </button>
           </div>
         </div>
@@ -1555,12 +1684,12 @@ function OverdueTaskCard({
   const rarityStyle = RARITY_STYLES[task.rarity] ?? RARITY_STYLES.common;
   const taskValue = getTaskValue(task);
   const deadlineDate = getCurrentPeriodDeadline(task);
-  const deadlineLabel = formatDeadline(deadlineDate);
+  const deadlineLabel = formatDeadline(deadlineDate, locale);
   const reminderDate = getReminderDate(deadlineDate, task.reminder?.offsetMinutes);
-  const reminderLabel = formatDeadline(reminderDate);
-  const overdueLabel = formatOverdueLabel(deadlineDate);
+  const reminderLabel = formatDeadline(reminderDate, locale);
+  const overdueLabel = formatOverdueLabel(deadlineDate, new Date(), copy.relativeTime);
   const commentValue = task.comment?.trim();
-  const commentText = commentValue ? commentValue : 'Без комментариев';
+  const commentText = commentValue ? commentValue : copy.noComment;
   const hasComment = Boolean(commentValue);
   const progressEnabled = Boolean(task.progressEnabled);
   const progressValue = normalizeProgressValue(task.progressValue ?? 0);
@@ -1604,7 +1733,7 @@ function OverdueTaskCard({
                   handleToggle();
                 }}
                 className="tm-button tm-button-ghost tm-button-sm px-2"
-                aria-label={expanded ? 'Collapse checklist' : 'Expand checklist'}
+                aria-label={expanded ? copy.collapseChecklist : copy.expandChecklist}
                 disabled={busy}
               >
                 {expanded ? 'v' : '>'}
@@ -1647,13 +1776,13 @@ function OverdueTaskCard({
                 <p className="text-sm text-amber-200/70 flex flex-wrap gap-3">
                   {deadlineLabel ? (
                     <span className="inline-flex items-center gap-1">
-                      <span role="img" aria-label="Дедлайн">⏰</span>
+                      <span role="img" aria-label={copy.deadline}>⏰</span>
                       {deadlineLabel}
                     </span>
                   ) : null}
                   {reminderLabel ? (
                     <span className="inline-flex items-center gap-1">
-                      <span role="img" aria-label="Напоминание">🔔</span>
+                      <span role="img" aria-label={copy.reminder}>🔔</span>
                       {reminderLabel}
                     </span>
                   ) : null}
@@ -1668,21 +1797,21 @@ function OverdueTaskCard({
             className="tm-button tm-button-primary tm-button-sm"
             disabled={busy}
           >
-            Сделать
+            {copy.complete}
           </button>
           <button
             onClick={() => onLog(task, true)}
             className="tm-button tm-button-danger tm-button-sm"
             disabled={busy}
           >
-            Пропустить
+            {copy.skip}
           </button>
           <button
             onClick={() => onEdit(task)}
             className="tm-button tm-button-ghost tm-button-sm"
             disabled={busy}
           >
-            Перенести
+            {copy.move}
           </button>
         </div>
       </div>
@@ -1690,7 +1819,7 @@ function OverdueTaskCard({
         <div className="tm-task-details space-y-3">
           {hasChecklist ? (
             <div className="space-y-2">
-              <p className="tm-task-details-title">Checklist</p>
+              <p className="tm-task-details-title">{copy.checklist}</p>
               <div className="space-y-2">
                 {checklistItems.map((item) => (
                   <label key={item.id} className="flex items-start gap-2 text-sm">
@@ -1717,7 +1846,7 @@ function OverdueTaskCard({
             />
           ) : null}
           <div className={hasComment ? 'tm-task-comment-panel' : undefined}>
-            <p className="tm-task-details-title">Комментарий</p>
+            <p className="tm-task-details-title">{copy.comment}</p>
             <p className="tm-task-details-text whitespace-pre-wrap">{commentText}</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1726,14 +1855,14 @@ function OverdueTaskCard({
               className="tm-button tm-button-ghost tm-button-sm"
               disabled={busy}
             >
-              Edit
+              {copy.edit}
             </button>
             <button
               onClick={() => onDelete(task)}
               className="tm-button tm-button-danger tm-button-sm"
               disabled={busy}
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? copy.deleting : copy.delete}
             </button>
           </div>
         </div>
@@ -1820,22 +1949,23 @@ type CompletionFloatFx = {
   originY: number;
 };
 
-const formatTimeOfDay = (value: unknown) => {
+const formatTimeOfDay = (value: unknown, locale: AppLocale = 'ru') => {
   const timestamp = parseEventTimestamp(value);
   if (Number.isNaN(timestamp)) return null;
-  return new Date(timestamp).toLocaleTimeString('ru-RU', {
+  return new Date(timestamp).toLocaleTimeString(getDateTimeLocale(locale), {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: false
   });
 };
 
 const shouldShowTaskStreak = (streak?: StreakState | null) =>
   Boolean(streak && (streak.currentCount > 0 || streak.bestCount > 0));
 
-const formatTaskStreakLabel = (streak: StreakState) =>
-  streak.bestCount > streak.currentCount
-    ? `Стрик ${streak.currentCount} · рекорд ${streak.bestCount}`
-    : `Стрик ${streak.currentCount}`;
+const formatTaskStreakLabel = (
+  streak: StreakState,
+  copy = TODAY_COPY.ru
+) => copy.streakLabel(streak.currentCount, streak.bestCount);
 
 function TodayRewardStrip({
   xp,
@@ -1922,8 +2052,10 @@ function CompletedTodaySection({
   emptyStateText: string;
   taskStreakById: Map<string, StreakState>;
 }) {
+  const { locale } = useLocale();
+  const copy = TODAY_COPY[locale];
   return (
-    <section className="tm-panel-soft p-4 space-y-3">
+    <section className="tm-panel-soft tm-completed-today-section p-4 space-y-3">
       <button
         type="button"
         onClick={onToggle}
@@ -1931,9 +2063,9 @@ function CompletedTodaySection({
         aria-expanded={expanded}
       >
         <div className="min-w-0">
-          <span className="text-lg font-semibold tm-title">Сделано сегодня · {totalCount}</span>
+          <span className="text-lg font-semibold tm-title">{copy.completedTodayTitle(totalCount)}</span>
           <p className="text-xs text-amber-200/70">
-            {totalCount > 0 ? 'Уже заработанный прогресс за день' : 'Закрытые задачи будут появляться здесь'}
+            {totalCount > 0 ? copy.completedTodayEarned : copy.completedTodayEmpty}
           </p>
         </div>
         <span
@@ -1959,7 +2091,7 @@ function CompletedTodaySection({
                         <span>{formatXpDelta(entry.xpDelta)}</span>
                         {entry.completedAtLabel ? <span>{entry.completedAtLabel}</span> : null}
                         {entry.task.periodicity === 'daily' && shouldShowTaskStreak(taskStreak) ? (
-                          <span>{formatTaskStreakLabel(taskStreak)}</span>
+                          <span>{formatTaskStreakLabel(taskStreak, copy)}</span>
                         ) : null}
                       </p>
                     </div>
@@ -1969,7 +2101,7 @@ function CompletedTodaySection({
                       className="tm-button tm-button-ghost tm-button-sm tm-completed-today-undo"
                       disabled={busyTaskId === entry.task.id}
                     >
-                      {busyTaskId === entry.task.id ? 'Отмена...' : 'Отменить'}
+                      {busyTaskId === entry.task.id ? copy.undoing : copy.undo}
                     </button>
                   </div>
                 );
@@ -1989,13 +2121,13 @@ function CompletedTodaySection({
             disabled={historyTotalCount === 0}
             aria-expanded={historyExpanded}
           >
-            Сделано ранее{historyTotalCount > 0 ? ` · ${historyTotalCount}` : ''}
+            {copy.completedEarlier(historyTotalCount)}
           </button>
           {historyExpanded ? (
             historyEntries.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-xs text-amber-200/70">
-                  Показаны последние {historyEntries.length} записей.
+                  {copy.completedHistoryShown(historyEntries.length)}
                 </p>
                 {historyEntries.map((entry) => {
                   const taskStreak = taskStreakById.get(entry.task.id);
@@ -2012,7 +2144,7 @@ function CompletedTodaySection({
                           <span>{formatXpDelta(entry.xpDelta)}</span>
                           {entry.completedAtLabel ? <span>{entry.completedAtLabel}</span> : null}
                           {entry.task.periodicity === 'daily' && shouldShowTaskStreak(taskStreak) ? (
-                            <span>{formatTaskStreakLabel(taskStreak)}</span>
+                            <span>{formatTaskStreakLabel(taskStreak, copy)}</span>
                           ) : null}
                         </p>
                       </div>
@@ -2022,14 +2154,14 @@ function CompletedTodaySection({
                         className="tm-button tm-button-ghost tm-button-sm tm-completed-today-undo"
                         disabled={busyHistoryEventId === entry.eventId}
                       >
-                        {busyHistoryEventId === entry.eventId ? 'Отмена...' : 'Отменить'}
+                        {busyHistoryEventId === entry.eventId ? copy.undoing : copy.undo}
                       </button>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-sm text-amber-200/70">Ранних выполнений пока нет.</p>
+              <p className="text-sm text-amber-200/70">{copy.noCompletedHistory}</p>
             )
           ) : null}
         </div>
@@ -2221,17 +2353,17 @@ function ExecutionTaskCard({
   const taskValue = getTaskValue(task);
   const taskValueToneClass = getTaskValueToneClass(taskValue);
   const deadlineDate = overdue ? getCurrentPeriodDeadline(task) : getNextDeadlineDate(task);
-  const deadlineLabel = formatDeadline(deadlineDate);
+  const deadlineLabel = formatDeadline(deadlineDate, locale);
   const reminderDate = getReminderDate(deadlineDate, task.reminder?.offsetMinutes);
-  const reminderLabel = formatDeadline(reminderDate);
-  const overdueLabel = overdue ? formatOverdueLabel(deadlineDate) : null;
-  const dueSoonMeta = overdue ? null : getDueSoonMeta(deadlineDate);
+  const reminderLabel = formatDeadline(reminderDate, locale);
+  const overdueLabel = overdue ? formatOverdueLabel(deadlineDate, new Date(), copy.relativeTime) : null;
+  const dueSoonMeta = overdue ? null : getDueSoonMeta(deadlineDate, new Date(), copy.relativeTime, locale);
   const commentValue = task.comment?.trim();
   const commentPreview =
     commentValue && commentValue.length > 120 ? `${commentValue.slice(0, 117)}...` : commentValue;
   const progressEnabled = Boolean(task.progressEnabled);
   const progressValue = normalizeProgressValue(task.progressValue ?? 0);
-  const streakLabel = shouldShowTaskStreak(streak) ? formatTaskStreakLabel(streak as StreakState) : null;
+  const streakLabel = shouldShowTaskStreak(streak) ? formatTaskStreakLabel(streak as StreakState, copy) : null;
   const skillTags = Array.isArray(task.skillTags)
     ? task.skillTags.map((tag) => tag.trim()).filter(Boolean)
     : [];
@@ -2579,7 +2711,7 @@ function ExecutionTaskCard({
           ) : null}
           {hasChecklist ? (
             <div className="space-y-2">
-              <p className="tm-task-details-title">Checklist</p>
+              <p className="tm-task-details-title">{copy.checklist}</p>
               <div className="space-y-2">
                 {checklistItems.map((item) => (
                   <label key={item.id} className="flex items-start gap-2 text-sm">
@@ -3084,13 +3216,13 @@ export function TodayPage() {
         return {
           task,
           occurredAt,
-          completedAtLabel: formatTimeOfDay(event.createdAt) ?? '',
+          completedAtLabel: formatTimeOfDay(event.createdAt, locale) ?? '',
           xpDelta: Math.max(0, Math.trunc(event.deltaXp))
         };
       })
       .filter((entry): entry is CompletedTodayEntry => Boolean(entry))
       .sort((left, right) => right.occurredAt - left.occurredAt);
-  }, [ledgerEvents, tasks]);
+  }, [ledgerEvents, locale, tasks]);
 
   const visibleCompletedTodayEntries = useMemo(
     () => completedTodayEntries.filter((entry) => matchesTaskControls(entry.task)),
@@ -3131,11 +3263,11 @@ export function TodayPage() {
         eventId: event.id,
         periodKey,
         occurredAt,
-        completedAtLabel: formatDeadline(event.createdAt) ?? '',
+        completedAtLabel: formatDeadline(event.createdAt, locale) ?? '',
         xpDelta: Math.max(0, Math.trunc(event.deltaXp))
       }))
       .sort((left, right) => right.occurredAt - left.occurredAt);
-  }, [ledgerEvents, tasks]);
+  }, [ledgerEvents, locale, tasks]);
 
   const filteredCompletedHistoryEntries = useMemo(
     () => completedHistoryEntries.filter((entry) => matchesTaskControls(entry.task)),
@@ -3316,8 +3448,8 @@ export function TodayPage() {
         setCompletionFeedback({
           id: result.projectBonus?.eventId ?? result.event.id,
           message: result.projectBonus
-            ? 'Проект завершён'
-            : `Сделано: ${task.title}`,
+            ? copy.completionFeedbackProject
+            : copy.completionFeedbackTask(task.title),
           xpDelta: result.projectBonus?.bonusXp ?? Math.max(0, result.event.deltaXp)
         });
         emitPetEvent({
@@ -3331,7 +3463,7 @@ export function TodayPage() {
         emitPetEvent({ type: 'operation-failed' });
       }
       await showAppAlert(
-        missed ? 'Не удалось отметить задачу как пропущенную.' : 'Не удалось завершить задачу.'
+        missed ? copy.unableMarkMissed : copy.unableCompleteTask
       );
       await load();
     } finally {
@@ -3390,7 +3522,7 @@ export function TodayPage() {
     if (!logDateTask) return;
     const occurredAt = parseLocalDateTime(logDateValue);
     if (!occurredAt) {
-      await showAppAlert('Укажите корректную дату и время события.');
+      await showAppAlert(copy.invalidEventDate);
       return;
     }
     const task = logDateTask;
@@ -3404,7 +3536,7 @@ export function TodayPage() {
       await logTaskEvent(task, 'TASK_UNDO', Date.now());
       await load();
     } catch (error) {
-      await showAppAlert('Не удалось отменить выполнение задачи.');
+      await showAppAlert(copy.unableUndoTask);
       await load();
     } finally {
       setLoggingTaskId(null);
@@ -3413,8 +3545,8 @@ export function TodayPage() {
 
   const undoHistoryEntry = async (entry: CompletedHistoryEntry) => {
     const confirmed = await showAppConfirm({
-      message: 'Убрать эту запись о выполнении из истории?',
-      confirmLabel: 'Убрать',
+      message: copy.removeHistoryConfirm,
+      confirmLabel: copy.removeHistoryLabel,
       tone: 'danger'
     });
     if (!confirmed) return;
@@ -3423,7 +3555,7 @@ export function TodayPage() {
       await deleteEvent(entry.eventId);
       await load();
     } catch (error) {
-      await showAppAlert('Не удалось убрать запись из истории.');
+      await showAppAlert(copy.unableRemoveHistory);
       await load();
     } finally {
       setRemovingHistoryEventId(null);
@@ -3432,8 +3564,8 @@ export function TodayPage() {
 
   const deleteTaskItem = async (task: Task) => {
     const confirmed = await showAppConfirm({
-      message: `Удалить задачу "${task.title}"?`,
-      confirmLabel: 'Удалить',
+      message: copy.deleteConfirm(task.title),
+      confirmLabel: copy.deleteConfirmLabel,
       tone: 'danger'
     });
     if (!confirmed) return;
@@ -3451,11 +3583,11 @@ export function TodayPage() {
           meta: { eventType: 'TASK_DELETE', refId: task.id, title: task.title }
         });
       } catch (error) {
-        await showAppAlert('Task deleted, but failed to add a ledger record.');
+        await showAppAlert(copy.taskDeletedLedgerFailed);
       }
       await load();
     } catch (error) {
-      await showAppAlert('Failed to delete task.');
+      await showAppAlert(copy.failedDeleteTask);
     } finally {
       setDeletingTaskId(null);
     }
@@ -3470,7 +3602,7 @@ export function TodayPage() {
     try {
       await updateTask(nextTask);
     } catch (error) {
-      await showAppAlert('Failed to update progress.');
+      await showAppAlert(copy.failedUpdateProgress);
       await load();
     }
   };
@@ -3487,7 +3619,7 @@ export function TodayPage() {
     try {
       await updateTask(nextTask);
     } catch (error) {
-      await showAppAlert('Failed to update checklist.');
+      await showAppAlert(copy.failedUpdateChecklist);
       await load();
     }
   };
@@ -3532,7 +3664,7 @@ export function TodayPage() {
     if (!calendarTask) return;
     const due = parseLocalDateTime(calendarValue);
     if (!due) {
-      void showAppAlert('Invalid date/time.');
+      void showAppAlert(copy.invalidEventDate);
       return;
     }
     downloadCalendar(calendarTask, due);
@@ -3580,7 +3712,7 @@ export function TodayPage() {
       await Promise.all(reorderedWithSort.map((task) => updateTask(task)));
       await load();
     } catch (error) {
-      await showAppAlert('Failed to reorder tasks.');
+      await showAppAlert(copy.failedReorderTasks);
       await load();
     }
   };
@@ -3671,7 +3803,7 @@ export function TodayPage() {
     try {
       await updateTask(nextTask);
     } catch (error) {
-      await showAppAlert('Не удалось перенести задачу.');
+      await showAppAlert(copy.unableMoveTask);
       await load();
     }
   };
@@ -4037,7 +4169,7 @@ export function TodayPage() {
                               </p>
                               <p className="text-xs text-amber-200/70">
                                 {(() => {
-                                  const nextDeadlineLabel = formatDeadline(getNextDeadlineDate(task));
+                                  const nextDeadlineLabel = formatDeadline(getNextDeadlineDate(task), locale);
                                   return nextDeadlineLabel
                                     ? `${copy.periodicityLabels[task.periodicity]} · ${nextDeadlineLabel}`
                                     : copy.periodicityLabels[task.periodicity];
