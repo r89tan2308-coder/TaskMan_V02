@@ -51,3 +51,6 @@ pet-runs/
 # Logs
 # ================================
 *.log
+
+# Local Netlify folder
+.netlify
